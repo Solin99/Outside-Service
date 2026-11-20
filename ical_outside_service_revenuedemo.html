@@ -1,0 +1,2914 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IRPC Testing Services: Outside Revenue Performance</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config = {
+  darkMode: 'class',
+  theme: { extend: {
+    fontFamily: { sans: ['Kanit','Plus Jakarta Sans','sans-serif'] },
+    colors: {
+      irpc: { 50:'#f0f8ff',100:'#e0f2fe',200:'#bae6fd',300:'#7dd3fc',400:'#38bdf8',
+              500:'#0ea5e9',600:'#0072BC',700:'#0369a1',800:'#003E7E',900:'#062f5e' },
+      sky2: '#00A0E9'
+    }
+  }}
+}
+</script>
+<style>
+  body{font-family:'Kanit','Plus Jakarta Sans',sans-serif;background:linear-gradient(135deg,#f8fbff 0%,#f0f5fc 100%);min-height:100vh;color:#334155;transition:.25s}
+  .dark body{background:linear-gradient(135deg,#060913 0%,#0b1329 100%);color:#cbd5e1}
+  
+  .card{background:#ffffff;border:1px solid rgba(226,232,240,.8);border-radius:16px;box-shadow:0 10px 25px -5px rgba(0,62,126,.05),0 8px 10px -6px rgba(0,62,126,.05);transition:all .25s cubic-bezier(.4,0,.2,1)}
+  .dark .card{background:#1e293b;border-color:rgba(51,65,85,.8);box-shadow:0 10px 25px -5px rgba(0,0,0,.3)}
+  .card:hover{transform:translateY(-2px);box-shadow:0 20px 35px -10px rgba(0,62,126,.12)}
+
+  .hd{background:linear-gradient(135deg,#002B5B 0%,#003E7E 50%,#0072BC 100%);box-shadow:0 4px 20px rgba(0,62,126,.2)}
+  .chip{border:1px solid #bae6fd;background:#f0f9ff;color:#0369a1;font-weight:500;border-radius:20px;padding:2px 10px}
+  .dark .chip{border-color:#334155;background:#0f172a;color:#38bdf8}
+  
+  ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:6px}
+  .dark ::-webkit-scrollbar-thumb{background:#334155}
+  
+  .glow{background:radial-gradient(circle at 10% 10%,rgba(0,160,233,.08),transparent 50%),radial-gradient(circle at 90% 90%,rgba(0,62,126,.05),transparent 50%)}
+  .dark .glow{background:radial-gradient(circle at 10% 10%,rgba(56,189,248,.03),transparent 50%)}
+
+  .sum-card,.kpi-card{height:100px;padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between}
+  .mini-card{height:92px;padding:12px 14px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
+  
+  .num-lg{font-size:1.35rem;line-height:1.75rem;letter-spacing:-.03em;font-weight:700;font-variant-numeric:tabular-nums}
+  .num-md{font-size:1.05rem;line-height:1.4rem;font-weight:600;font-variant-numeric:tabular-nums}
+  .lbl{font-size:11px;font-weight:500;letter-spacing:.01em;color:#64748b}
+  .dark .lbl{color:#94a3b8}
+  .sub-xs{font-size:10px;color:#94a3b8}
+  
+  .ico{width:36px;height:36px;border-radius:10px;font-size:16px;display:flex;align-items:center;justify-content:center}
+  .kpi-bar{height:6px;border-radius:3px}
+  
+  table{font-variant-numeric:tabular-nums}
+  .sec-title{font-size:14px;font-weight:600;color:#003E7E;letter-spacing:-.01em}
+  .dark .sec-title{color:#38bdf8}
+  
+  .btn{font-size:12px;padding:7px 14px;border-radius:10px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all .2s;box-shadow:0 2px 5px rgba(0,0,0,.05)}
+  .btn:active{transform:scale(0.97)}
+  
+  .sel{border:1px solid #cbd5e1;border-radius:10px;padding:5px 10px;font-size:12px;background:#fff;outline:none;transition:.2s}
+  .sel:focus{border-color:#0072BC;box-shadow:0 0 0 3px rgba(0,114,188,.15)}
+  .dark .sel{background:#0f172a;border-color:#334155;color:#e2e8f0}
+  .sel-xs{border:1px solid #cbd5e1;border-radius:8px;padding:3px 8px;font-size:11px;background:#fff;outline:none}
+  .dark .sel-xs{background:#0f172a;border-color:#334155;color:#e2e8f0}
+
+  .hc-row{display:flex;align-items:flex-start;gap:10px;padding:8px 12px;border-radius:10px;font-size:12px;line-height:18px}
+  .hc-ok{background:#f0fdf4;color:#166534;border:1px solid #dcfce7}
+  .dark .hc-ok{background:rgba(21,128,61,.15);color:#4ade80;border-color:rgba(21,128,61,.3)}
+  .hc-warn{background:#fffbeb;color:#92400e;border:1px solid #fef3c7}
+  .dark .hc-warn{background:rgba(180,83,9,.15);color:#fbbf24;border-color:rgba(180,83,9,.3)}
+  .hc-err{background:#fff1f2;color:#9f1239;border:1px solid #ffe4e6}
+  .dark .hc-err{background:rgba(190,18,60,.15);color:#fb7185;border-color:rgba(190,18,60,.3)}
+
+  th{white-space:nowrap;font-weight:600;color:#475569;background:#f8fafc;padding:9px 8px!important}
+  .dark th{color:#94a3b8;background:#0f172a!important}
+  td{padding:7px 8px!important}
+  
+  .tbl-scroll{max-height:260px;overflow:auto}
+  .tbl-half{max-height:130px;overflow:auto}
+  .h-main{position:relative;height:430px}
+  .h-main canvas{max-width:100%}
+  .tbl-list{max-height:440px;overflow:auto}
+  .tbl-list table{font-size:13px}
+  .tbl-list thead th{font-size:12px;box-shadow:0 1px 0 #e2e8f0}
+  .dark .tbl-list thead th{box-shadow:0 1px 0 #334155}
+  .tbl-list tbody tr.data-row:nth-child(even){background:rgba(248,250,252,.9)}
+  .dark .tbl-list tbody tr.data-row:nth-child(even){background:rgba(15,23,42,.45)}
+  .tbl-list td{vertical-align:middle;padding-top:9px!important;padding-bottom:9px!important}
+  .tbl-list .nm{white-space:normal;word-break:break-word;line-height:1.35}
+  .rank{display:inline-flex;width:24px;height:24px;align-items:center;justify-content:center;border-radius:8px;font-size:11px;font-weight:600;background:#f1f5f9;color:#64748b}
+  .rank.top{background:#fee2e2;color:#be123c}
+  .dark .rank{background:#0f172a;color:#94a3b8}
+  .mbar{height:4px;border-radius:2px;margin-top:4px;margin-left:auto}
+  .mgrp td{background:#ecfdf5!important;color:#047857;font-weight:600;font-size:12px;padding-top:6px!important;padding-bottom:6px!important;position:sticky;top:34px;z-index:1}
+  .dark .mgrp td{background:rgba(6,78,59,.35)!important;color:#6ee7b7}
+  .idle{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:12px;white-space:nowrap}
+  .idle-hi{background:#ffe4e6;color:#be123c}.idle-md{background:#fef3c7;color:#b45309}.idle-lo{background:#f1f5f9;color:#475569}
+  .dark .idle-hi{background:rgba(190,18,60,.25);color:#fda4af}.dark .idle-md{background:rgba(180,83,9,.25);color:#fcd34d}.dark .idle-lo{background:#0f172a;color:#94a3b8}
+  
+  .opt-bar{border-top:1px dashed #cbd5e1;margin-top:12px;padding-top:10px}
+  .dark .opt-bar{border-color:#334155}
+  
+  .modal{background:rgba(15,23,42,.6);backdrop-filter:blur(6px)}
+  .box{border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px;background:#f8fafc}
+  .dark .box{border-color:#334155;background:#0f172a}
+  
+  .comp-link{cursor:pointer;color:#0072BC;font-weight:500}
+  .dark .comp-link{color:#38bdf8}
+  .comp-link:hover{text-decoration:underline;color:#00A0E9}
+
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99;
+    background:#0f172a;color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:500;
+    box-shadow:0 15px 30px -5px rgba(0,0,0,.4);opacity:0;pointer-events:none;transition:all .3s cubic-bezier(.4,0,.2,1)}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+
+  .print-only{display:none}
+  details.defs>summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  details.defs>summary::-webkit-details-marker{display:none}
+  details.defs[open] .defs-arrow{transform:rotate(180deg)}
+  .defs-arrow{transition:transform .2s;color:#94a3b8}
+  .defs dt{font-weight:600;font-size:12.5px;color:#0f4c81;margin-top:2px}
+  .dark .defs dt{color:#7dd3fc}
+  .defs dd{font-size:12px;line-height:1.55;color:#475569;margin:0 0 4px}
+  .dark .defs dd{color:#cbd5e1}
+  .defs-box{border:1px solid #e2e8f0;border-radius:12px;padding:12px 14px;background:rgba(248,250,252,.7)}
+  .dark .defs-box{border-color:#334155;background:rgba(15,23,42,.4)}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;vertical-align:baseline}
+  @media print{
+    *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+    html,body{background:#fff!important;color:#0f172a!important}
+    .no-print,#toast,.modal,#exclModal,#compModal{display:none!important}
+    .print-only{display:block!important}
+    #printChips.hidden{display:block!important}
+    header.hd,.sticky{position:static!important}
+    header.hd{backdrop-filter:none!important}
+    header.hd>div{padding-top:10px!important;padding-bottom:10px!important}
+    main{max-width:100%!important;padding:6px 0 0!important}
+    .card{box-shadow:none!important;border:1px solid #d5e0ec!important;break-inside:avoid;page-break-inside:avoid}
+    .card:has(.tbl-list),.card:has(.tbl-scroll),.card:has(.tbl-half){break-inside:auto;page-break-inside:auto}
+    .tbl-scroll,.tbl-list,.tbl-half{max-height:none!important;overflow:visible!important}
+    table{min-width:0!important;width:100%!important}
+    thead{display:table-header-group}
+    tr,.mgrp td{break-inside:avoid;page-break-inside:avoid}
+    thead th,.mgrp td{position:static!important}
+    .h-main{height:320px!important}
+    .h-mini{height:260px!important}
+    canvas{max-width:100%!important}
+    h2.sec-title{break-after:avoid;page-break-after:avoid}
+    #printMeta{font-size:11px;color:#475569;margin:2px 0 6px}
+    #secDefs{break-inside:auto!important;page-break-inside:auto!important}
+    @page{size:A4 landscape;margin:9mm 8mm 12mm;
+      @bottom-left{content:"IRPC Testing Services · Outside Revenue Performance";font-size:8pt;color:#64748b}
+      @bottom-right{content:"หน้า " counter(page) " / " counter(pages);font-size:8pt;color:#64748b}}
+  }
+</style>
+</head>
+<body class="text-slate-700 dark:text-slate-200">
+
+<header class="hd text-white sticky top-0 z-40 backdrop-blur-md bg-opacity-95">
+  <div class="max-w-[1500px] mx-auto px-6 py-4 flex flex-wrap items-center gap-4 justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-xl shadow-inner font-bold">IR</div>
+      <div>
+        <h1 class="text-lg md:text-xl font-bold tracking-tight">IRPC Testing Services: Outside Revenue Performance</h1>
+        <p class="text-irpc-100 text-[11px] opacity-90">รายได้จากงานบริการรับจ้างวิเคราะห์ภายนอก · Executive Dashboard <span class="bg-white/25 px-1.5 py-0.2 rounded text-[9.5px] ml-1">v3.26</span></p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2.5 no-print flex-wrap">
+      <div class="text-right hidden xl:block mr-2 border-r border-white/20 pr-3">
+        <div id="srcLabel" class="text-[11px] text-irpc-100 font-medium">แหล่งข้อมูล: Mockup Data</div>
+        <div id="rowLabel" class="text-[10px] text-white/70">—</div>
+      </div>
+      <button id="btnTheme" class="btn bg-white/10 hover:bg-white/20 border border-white/20 text-white" title="สลับโหมดมืด/สว่าง">🌙</button>
+      <button id="btnExclModal" class="btn bg-white/10 hover:bg-white/20 border border-white/20 text-white">⚙️ ยกเว้น ลค.ใหม่</button>
+      <button id="btnXlsx" class="btn bg-white/10 hover:bg-white/20 border border-white/20 text-white">⬇ Excel</button>
+      <button id="btnPng"  class="btn bg-white/10 hover:bg-white/20 border border-white/20 text-white">🖼 PNG</button>
+      <button id="btnShare" class="btn bg-white/10 hover:bg-white/20 border border-white/20 text-white" title="บันทึกรายงานเป็นไฟล์ HTML เปิดดูได้ทุกเครื่อง ส่งต่อได้ทันที">📤 แชร์ (HTML)</button>
+      <button id="btnPdf"  class="btn bg-white/10 hover:bg-white/20 border border-white/20 text-white">🖨 PDF</button>
+      <label class="btn cursor-pointer bg-white text-irpc-800 hover:bg-irpc-50 shadow-md font-semibold">
+        ⬆ อัปโหลดข้อมูล
+        <input id="fileInput" type="file" accept=".xlsx,.xls,.csv" multiple class="hidden">
+      </label>
+    </div>
+  </div>
+</header>
+
+<main id="dashRoot" class="max-w-[1500px] mx-auto px-6 py-5 space-y-4">
+
+  <!-- FILTERS -->
+  <section class="card glow p-4 no-print">
+    <div class="flex flex-wrap items-end gap-3">
+      <div>
+        <label class="block text-[11px] font-semibold text-slate-500 dark:text-slate-400 mb-1">ปี (Year)</label>
+        <select id="fYear" class="w-28 sel font-medium"></select>
+      </div>
+      <div id="msMonth"></div>
+      <div id="msComp"></div>
+      <div id="msReq"></div>
+      <div id="msSamp"></div>
+      <div id="msLab"></div>
+      <button id="btnReset" class="ml-auto px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold transition">ล้างตัวกรอง</button>
+    </div>
+    <div class="opt-bar flex flex-wrap items-center gap-x-5 gap-y-2">
+      <span class="text-[11px] font-semibold text-slate-400">ตัวเลือกการประมวลผล:</span>
+      <label class="flex items-center gap-1.5 text-[11.5px] cursor-pointer select-none">
+        <input id="fAutoClean" type="checkbox" class="accent-irpc-600 w-4 h-4 rounded" checked> รวมชื่อลูกค้าอัตโนมัติ
+      </label>
+      <label class="flex items-center gap-1.5 text-[11.5px] cursor-pointer select-none">
+        <input id="fFuzzy" type="checkbox" class="accent-amber-500 w-4 h-4 rounded"> รวมชื่อที่คล้ายกัน
+      </label>
+      <select id="fFuzzyLv" class="sel-xs">
+        <option value="0.92">เข้มงวด 92%</option>
+        <option value="0.86" selected>ปานกลาง 86%</option>
+        <option value="0.80">ผ่อนปรน 80%</option>
+      </select>
+      <label class="flex items-center gap-1.5 text-[11.5px] cursor-pointer select-none">
+        <input id="fExclInternal" type="checkbox" class="accent-rose-500 w-4 h-4 rounded" checked> ใช้รายชื่อยกเว้นลูกค้าใหม่
+      </label>
+      <span id="mgBadge" class="text-[10.5px] px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium border border-slate-200 dark:border-slate-700">–</span>
+      <span class="text-[10.5px] text-sky-600 dark:text-sky-400 font-medium ml-auto">💡 คลิกชื่อบริษัทในตาราง/กราฟ เพื่อเปิดประวัติเชิงลึก</span>
+    </div>
+    <div id="activeChips" class="flex flex-wrap gap-1.5 mt-3 pt-2 border-t border-slate-100 dark:border-slate-800"></div>
+  </section>
+  <div id="printMeta" class="print-only"></div>
+  <div id="printChips" class="hidden"></div>
+
+  <!-- SUMMARY CARDS -->
+  <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="card sum-card border-l-4 border-l-irpc-600 flex items-center justify-between">
+      <div class="min-w-0"><p class="lbl">รายได้รวม (บาท)</p>
+        <p id="kRev" class="num-lg text-irpc-800 dark:text-sky-400 mt-0.5">–</p>
+        <p id="kRevSub" class="sub-xs truncate mt-0.5">—</p></div>
+      <div class="ico bg-irpc-50 dark:bg-slate-800 text-irpc-600 shrink-0 shadow-sm">฿</div>
+    </div>
+    <div class="card sum-card border-l-4 border-l-sky2 flex items-center justify-between">
+      <div class="min-w-0"><p class="lbl">จำนวนตัวอย่าง</p>
+        <p id="kSample" class="num-lg text-irpc-800 dark:text-sky-400 mt-0.5">–</p>
+        <p id="kSampleSub" class="sub-xs truncate mt-0.5">—</p></div>
+      <div class="ico bg-sky-50 dark:bg-slate-800 text-sky-500 shrink-0 shadow-sm">🧪</div>
+    </div>
+    <div class="card sum-card border-l-4 border-l-teal-500 flex items-center justify-between">
+      <div class="min-w-0"><p class="lbl">ใบเสนอราคา · อัตราปิดงาน</p>
+        <p id="kQuote" class="num-lg text-irpc-800 dark:text-sky-400 mt-0.5">–</p>
+        <p id="kQuoteSub" class="sub-xs truncate mt-0.5">—</p></div>
+      <div class="ico bg-teal-50 dark:bg-slate-800 text-teal-600 shrink-0 shadow-sm">📄</div>
+    </div>
+    <div class="card sum-card border-l-4 border-l-indigo-500 flex items-center justify-between">
+      <div class="min-w-0"><p class="lbl">รายการทดสอบ</p>
+        <p id="kTest" class="num-lg text-irpc-800 dark:text-sky-400 mt-0.5">–</p>
+        <p id="kTestSub" class="sub-xs truncate mt-0.5">—</p></div>
+      <div class="ico bg-indigo-50 dark:bg-slate-800 text-indigo-600 shrink-0 shadow-sm">📊</div>
+    </div>
+  </section>
+
+  <!-- MoM / YoY / KPI -->
+  <section class="grid grid-cols-2 md:grid-cols-4 gap-4">
+    <div class="card kpi-card">
+      <p class="lbl">MoM · เทียบเดือนก่อน</p>
+      <div class="flex items-baseline gap-1.5 mt-1"><p id="momPct" class="num-lg">–</p><span id="momArrow" class="text-xs font-bold"></span></div>
+      <p id="momDetail" class="sub-xs truncate mt-1">—</p>
+    </div>
+    <div class="card kpi-card">
+      <p class="lbl">YoY · เทียบปีก่อน</p>
+      <div class="flex items-baseline gap-1.5 mt-1"><p id="yoyPct" class="num-lg">–</p><span id="yoyArrow" class="text-xs font-bold"></span></div>
+      <p id="yoyDetail" class="sub-xs truncate mt-1">—</p>
+      <p id="yoyWarn" class="text-[10.5px] text-amber-600 mt-1 leading-snug"></p>
+    </div>
+    <div id="kpiMonthCard" class="card kpi-card">
+      <div class="flex items-center justify-between gap-2">
+        <p class="lbl">KPI · รายเดือน (บาท)</p>
+        <span id="kpiMonthBadge" class="text-[9.5px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shadow-xs">–</span>
+      </div>
+      <p id="kpiMonthVal" class="num-md text-slate-800 dark:text-slate-100 mt-0.5">–</p>
+      <div class="w-full kpi-bar bg-slate-100 dark:bg-slate-800 overflow-hidden my-1"><div id="kpiMonthBar" class="h-full rounded-full transition-all duration-500" style="width:0%"></div></div>
+      <p id="kpiMonthSub" class="sub-xs truncate">—</p>
+    </div>
+    <div id="kpiYearCard" class="card kpi-card">
+      <div class="flex items-center justify-between gap-2">
+        <p class="lbl">KPI · รายปี YTD (บาท)</p>
+        <span id="kpiYearBadge" class="text-[9.5px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shadow-xs">–</span>
+      </div>
+      <p id="kpiYearVal" class="num-md text-slate-800 dark:text-slate-100 mt-0.5">–</p>
+      <div class="w-full kpi-bar bg-slate-100 dark:bg-slate-800 overflow-hidden my-1"><div id="kpiYearBar" class="h-full rounded-full transition-all duration-500" style="width:0%"></div></div>
+      <p id="kpiYearSub" class="sub-xs truncate">—</p>
+    </div>
+  </section>
+
+  <!-- MINI CARDS · 7 ใบ -->
+  <section class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
+    <div class="card mini-card border-l-4 border-l-emerald-500">
+      <p id="lblNewCust" class="lbl truncate">ลูกค้าใหม่</p>
+      <p id="kNewCust" class="num-md text-emerald-600 dark:text-emerald-400">–</p>
+      <p id="kNewCustSub" class="sub-xs truncate">—</p>
+    </div>
+    <div class="card mini-card border-l-4 border-l-emerald-400">
+      <p id="lblNewRev" class="lbl truncate">รายได้ลูกค้าใหม่ (บาท)</p>
+      <p id="kNewRev" class="num-md text-emerald-700 dark:text-emerald-400">–</p>
+      <p id="kNewRevSub" class="sub-xs truncate">—</p>
+    </div>
+    <div class="card mini-card border-l-4 border-l-amber-500">
+      <p class="lbl truncate">Retention / Churn</p>
+      <p id="kRetention" class="num-md text-amber-600 dark:text-amber-400">–</p>
+      <p id="kRetentionSub" class="sub-xs truncate">—</p>
+    </div>
+    <div class="card mini-card border-l-4 border-l-sky2">
+      <p class="lbl truncate">Lead Time (Avg/P90)</p>
+      <p id="kLead" class="num-md text-sky-600 dark:text-sky-400">–</p>
+      <p id="kLeadSub" class="sub-xs truncate">—</p>
+    </div>
+    <div class="card mini-card border-l-4 border-l-purple-500">
+      <p class="lbl truncate">งานด่วน (Urg/Exp)</p>
+      <p id="kExpress" class="num-md text-purple-600 dark:text-purple-400">–</p>
+      <p id="kExpressSub" class="sub-xs truncate">—</p>
+    </div>
+    <div class="card mini-card border-l-4 border-l-rose-500">
+      <p class="lbl truncate">ลูกค้าเสี่ยงหาย (At-risk)</p>
+      <p id="kRisk" class="num-md text-rose-600 dark:text-rose-400">–</p>
+      <p id="kRiskSub" class="sub-xs truncate">—</p>
+    </div>
+    <div class="card mini-card border-l-4 border-l-slate-400">
+      <p class="lbl truncate">การกระจุกตัว (Top 3)</p>
+      <p id="uConc" class="num-md text-slate-700 dark:text-slate-200">–</p>
+      <p id="uConcSub" class="sub-xs truncate">—</p>
+    </div>
+  </section>
+
+  <!-- TREND MONTHLY -->
+  <section class="card p-4">
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <h2 class="sec-title">แนวโน้มรายได้รายเดือน &amp; การพยากรณ์ (Trend + Forecast)</h2>
+      <div class="flex gap-2">
+        <span class="text-[10.5px] chip px-2.5 py-1 rounded-lg">เส้นประเขียว = เป้า L3 (1.5M บ./เดือน)</span>
+        <span class="text-[10.5px] chip px-2.5 py-1 rounded-lg bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border border-violet-100 dark:border-violet-900">แท่งจาง = คาดการณ์</span>
+      </div>
+    </div>
+    <div class="h-trend"><canvas id="chTrend"></canvas></div>
+  </section>
+
+  <!-- DAILY TREND -->
+  <section class="card p-4">
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <h2 class="sec-title">📈 รายได้รายวัน (Daily Revenue · ค่าเฉลี่ย 7 วัน · ยอดสะสม)</h2>
+      <div class="flex gap-2 flex-wrap">
+        <span class="text-[10.5px] chip px-2.5 py-1 rounded-lg">ฟ้า = รายวัน</span>
+        <span class="text-[10.5px] chip px-2.5 py-1 rounded-lg" style="border-color:#fed7aa;background:#fff7ed;color:#c2410c">ส้ม = ค่าเฉลี่ย 7 วัน</span>
+        <span class="text-[10.5px] chip px-2.5 py-1 rounded-lg" style="border-color:#e9d5ff;background:#faf5ff;color:#7e22ce">ประม่วง = ยอดสะสม</span>
+      </div>
+    </div>
+    <div class="h-trend"><canvas id="chDailyTrend"></canvas></div>
+    <p id="dailyNote" class="sub-xs mt-2">—</p>
+  </section>
+
+  <!-- NEW CUSTOMER CHARTS -->
+  <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <h2 class="sec-title">🌱 ลูกค้าใหม่รายเดือน (จำนวน + สะสม)</h2>
+        <span class="text-[10.5px] chip px-2.5 py-1 rounded-lg">ไม่เคยใช้บริการมาก่อนเลย</span>
+      </div>
+      <div class="h-mini"><canvas id="chNewCust"></canvas></div>
+      <p id="ncNote" class="sub-xs mt-2">—</p>
+    </div>
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <h2 class="sec-title">💰 รายได้ลูกค้าใหม่ vs ลูกค้าเดิม (รายเดือน)</h2>
+        <select id="fNcMode" class="sel no-print">
+          <option value="cohort" selected>นับเฉพาะเดือนที่ได้ลูกค้ามา (Cohort)</option>
+          <option value="year">นับทุกเดือนของลูกค้าใหม่ในปีนี้</option>
+        </select>
+      </div>
+      <div class="h-mini"><canvas id="chNewRev"></canvas></div>
+      <p id="nrNote" class="sub-xs mt-2">—</p>
+    </div>
+  </section>
+
+  <!-- NEW CUSTOMER LIST (ปรับขนาดคอลัมน์ให้กระชับ สมดุล) -->
+  <section class="card p-4">
+    <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+      <h2 class="sec-title">📇 รายชื่อลูกค้าใหม่ (New Customer List)</h2>
+      <div class="flex items-center gap-2">
+        <span id="ncCount" class="text-[11px] px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 font-medium">–</span>
+        <select id="fNcMonth" class="sel no-print"><option value="ALL">ทุกเดือน</option></select>
+      </div>
+    </div>
+    <div class="tbl-list rounded-xl border border-slate-100 dark:border-slate-800">
+      <table class="w-full" style="min-width:720px">
+        <colgroup>
+          <col style="width: 52px;">
+          <col>
+          <col style="width: 120px;">
+          <col style="width: 200px;">
+          <col style="width: 64px;">
+          <col style="width: 84px;">
+          <col style="width: 150px;">
+        </colgroup>
+        <thead class="sticky top-0 z-10"><tr>
+          <th class="py-2 pl-3 font-semibold text-left">#</th>
+          <th class="py-2 font-semibold text-left">ชื่อลูกค้า</th>
+          <th class="py-2 font-semibold text-left">เดือนแรก</th>
+          <th class="py-2 font-semibold text-left">กลุ่มบริการแรก</th>
+          <th class="py-2 font-semibold text-right">ใบ</th>
+          <th class="py-2 font-semibold text-right">ตัวอย่าง</th>
+          <th class="py-2 pr-3 font-semibold text-right">รายได้ปีแรก (บ.)</th>
+        </tr></thead>
+        <tbody id="tbNewCust"></tbody>
+      </table>
+    </div>
+    <p id="ncExclNote" class="sub-xs mt-1.5">—</p>
+  </section>
+
+  <!-- AT-RISK CUSTOMERS (ปรับขนาดคอลัมน์ให้กระชับ สมดุล) -->
+  <section class="card p-4">
+    <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+      <h2 class="sec-title">⚠️ ลูกค้าเสี่ยงหาย (At-Risk Customers)</h2>
+      <div class="flex items-center gap-2 flex-wrap">
+        <span id="arCount" class="text-[11px] px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-100 font-medium">–</span>
+        <span class="text-[11px] text-slate-400">มีงานปีก่อน แต่ปีที่เลือกยังไม่มีงาน · เรียงตามรายได้ · คลิกชื่อเพื่อดูประวัติ</span>
+      </div>
+    </div>
+    <div class="tbl-list rounded-xl border border-slate-100 dark:border-slate-800">
+      <table class="w-full" style="min-width:680px">
+        <colgroup>
+          <col style="width: 52px;">
+          <col>
+          <col style="width: 170px;">
+          <col style="width: 64px;">
+          <col style="width: 130px;">
+          <col style="width: 120px;">
+        </colgroup>
+        <thead class="sticky top-0 z-10"><tr>
+          <th class="py-2 pl-3 font-semibold text-left">#</th>
+          <th class="py-2 font-semibold text-left">ชื่อลูกค้า</th>
+          <th class="py-2 font-semibold text-right">รายได้ปีก่อน (บ.)</th>
+          <th class="py-2 font-semibold text-right">ใบ</th>
+          <th class="py-2 font-semibold text-right">สั่งล่าสุด</th>
+          <th class="py-2 pr-3 font-semibold text-center">ห่างหายมา</th>
+        </tr></thead>
+        <tbody id="tbAtRisk"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- DECLINING CUSTOMERS -->
+  <section class="card p-4">
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <h2 class="sec-title">📉 ลูกค้ารายได้ลดลงมาก (Declining Customers)</h2>
+      <div class="flex items-center gap-2 flex-wrap">
+        <span id="declCount" class="text-[11px] px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-100 font-medium">–</span>
+        <select id="fDeclPct" class="sel no-print" title="เกณฑ์การลดลง">
+          <option value="30" selected>ลดลง ≥ 30%</option>
+          <option value="50">ลดลง ≥ 50%</option>
+          <option value="70">ลดลง ≥ 70%</option>
+        </select>
+        <select id="fDeclMin" class="sel no-print" title="ยอดปีก่อนขั้นต่ำ">
+          <option value="0">ทุกขนาดลูกค้า</option>
+          <option value="10000" selected>ยอดปีก่อน ≥ 10,000</option>
+          <option value="50000">ยอดปีก่อน ≥ 50,000</option>
+        </select>
+      </div>
+    </div>
+    <p id="declNote" class="sub-xs mb-2">—</p>
+    <div class="tbl-list rounded-xl border border-slate-100 dark:border-slate-800">
+      <table class="w-full" style="min-width:700px">
+        <colgroup>
+          <col style="width: 52px;"><col><col style="width: 120px;"><col style="width: 120px;">
+          <col style="width: 150px;"><col style="width: 100px;"><col style="width: 110px;">
+        </colgroup>
+        <thead class="sticky top-0 z-10"><tr>
+          <th class="py-2 pl-3 font-semibold text-left">#</th>
+          <th class="py-2 font-semibold text-left">ชื่อลูกค้า</th>
+          <th id="thDeclPrev" class="py-2 font-semibold text-right">ปีก่อน</th>
+          <th id="thDeclCur" class="py-2 font-semibold text-right">ปีนี้</th>
+          <th class="py-2 font-semibold text-right">ผลต่าง (บาท)</th>
+          <th class="py-2 font-semibold text-center">ลดลง</th>
+          <th class="py-2 pr-3 font-semibold text-right">จำนวนใบ</th>
+        </tr></thead>
+        <tbody id="tbDecl"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- LEAD TIME -->
+  <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="card p-4">
+      <h2 class="sec-title mb-3">⏱ Lead Time เฉลี่ยรายเดือน (วัน)</h2>
+      <div class="h-mini"><canvas id="chLeadMonth"></canvas></div>
+      <p id="ltNote" class="sub-xs mt-2">—</p>
+    </div>
+    <div class="card p-4">
+      <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+        <h2 class="sec-title">⏱ Lead Time แยกตามหน่วยงาน</h2>
+        <select id="fLtDim" class="sel no-print">
+          <option value="lab" selected>แยกตามส่วน (Lab)</option>
+          <option value="loc">แยกตาม Lab Location</option>
+          <option value="svc">แยกตามกลุ่มบริการ</option>
+        </select>
+      </div>
+      <div class="h-mini"><canvas id="chLeadDim"></canvas></div>
+      <p class="sub-xs mt-2">Lead Time = completeDate − requestDate (วัน) · เฉพาะรายการที่ปิดงานแล้ว</p>
+    </div>
+  </section>
+
+  <!-- QUARTER + PIPELINE -->
+  <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="card p-4">
+      <h2 class="sec-title mb-3">📅 สรุปรายไตรมาส (Quarterly Performance)</h2>
+      <div class="overflow-x-auto rounded-xl border border-slate-100 dark:border-slate-800">
+        <table class="w-full text-[12px]">
+          <thead><tr>
+            <th class="py-2 pl-3 font-semibold text-left">ไตรมาส</th>
+            <th class="py-2 font-semibold text-right">รายได้ (บาท)</th>
+            <th class="py-2 font-semibold text-right">ลูกค้าใหม่</th>
+            <th class="py-2 font-semibold text-right">ตัวอย่าง</th>
+            <th class="py-2 font-semibold text-right">% เป้า L3</th>
+            <th class="py-2 pr-3 font-semibold text-left">ระดับ</th>
+          </tr></thead>
+          <tbody id="tbQuarter"></tbody>
+        </table>
+      </div>
+      <p class="sub-xs mt-2">เป้า L3 ต่อไตรมาส = 4,500,000 บาท</p>
+    </div>
+    <div class="card p-4">
+      <h2 class="sec-title mb-3">📋 รายได้ตามสถานะงาน (Pipeline by Status)</h2>
+      <div class="h-mini"><canvas id="chStatus"></canvas></div>
+      <p id="pipeNote" class="sub-xs mt-2">—</p>
+    </div>
+  </section>
+
+  <!-- COMPANY + LAB -->
+  <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="card p-4 lg:col-span-2">
+      <h2 class="sec-title mb-3">รายได้ vs ลูกค้า (Top 10) <span class="text-[10px] font-normal text-sky-500">· คลิกแท่งเพื่อดูรายละเอียด</span></h2>
+      <div class="flex items-center gap-4 text-[11px] text-slate-500 mb-2 flex-wrap">
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#0072BC;margin-right:5px"></span>ลูกค้าเดิม</span>
+        <span><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:#22c55e;margin-right:5px"></span>ลูกค้าใหม่ปีนี้</span>
+        <span id="compTopShare" class="ml-auto font-medium text-slate-600 dark:text-slate-300"></span>
+      </div>
+      <div class="h-main" style="height:410px"><canvas id="chCompany"></canvas></div>
+    </div>
+    <div class="card p-4">
+      <h2 class="sec-title mb-3">จำนวนตัวอย่าง vs ส่วน (Lab)</h2>
+      <div class="h-main"><canvas id="chLab"></canvas></div>
+    </div>
+  </section>
+
+  <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="card p-4">
+      <h2 class="sec-title mb-3">จำนวนตัวอย่าง vs Lab Location</h2>
+      <div class="h-mini"><canvas id="chLoc"></canvas></div>
+    </div>
+    <div class="card p-4">
+      <h2 class="sec-title mb-3">รายได้ตามกลุ่มบริการ (Service Group)</h2>
+      <div class="h-mini"><canvas id="chSvc"></canvas></div>
+    </div>
+  </section>
+
+  <!-- SERVICE GROUP YoY -->
+  <section class="card p-4">
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <h2 class="sec-title">📊 รายได้ตามกลุ่มบริการ เทียบปีต่อปี (Service Group YoY)</h2>
+      <div class="flex items-center gap-2 flex-wrap">
+        <span id="svcYoyBasis" class="chip text-[11px]">–</span>
+        <select id="fSvcYoyMetric" class="sel no-print">
+          <option value="rev">รายได้ (บาท)</option>
+          <option value="quote">จำนวนใบเสนอราคา</option>
+          <option value="sample">จำนวนตัวอย่าง</option>
+        </select>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div class="h-mini" style="height:340px"><canvas id="chSvcYoy"></canvas></div>
+      <div class="tbl-list rounded-xl border border-slate-100 dark:border-slate-800" style="max-height:340px">
+        <table class="w-full" style="min-width:520px">
+          <thead class="sticky top-0 z-10"><tr>
+            <th class="py-2 pl-3 font-semibold text-left">กลุ่มบริการ</th>
+            <th id="thSvcPrev" class="py-2 font-semibold text-right">ปีก่อน</th>
+            <th id="thSvcCur" class="py-2 font-semibold text-right">ปีนี้</th>
+            <th class="py-2 font-semibold text-right">ผลต่าง</th>
+            <th class="py-2 pr-3 font-semibold text-center">YoY %</th>
+          </tr></thead>
+          <tbody id="tbSvcYoy"></tbody>
+        </table>
+      </div>
+    </div>
+    <p id="svcYoyNote" class="sub-xs mt-2">—</p>
+  </section>
+
+  <!-- YoY BRIDGE -->
+  <section class="card p-4">
+    <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+      <h2 class="sec-title">🧭 ทำไมรายได้ถึงเปลี่ยน? แยกที่มาของผลต่าง YoY (Revenue Bridge)</h2>
+      <span id="bridgeBasis" class="chip text-[11px]">–</span>
+    </div>
+    <p id="bridgeStory" class="text-[13px] text-slate-600 dark:text-slate-300 mb-3 leading-relaxed">—</p>
+    <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+      <div class="h-mini" style="height:340px"><canvas id="chBridge"></canvas></div>
+      <div class="tbl-list rounded-xl border border-slate-100 dark:border-slate-800" style="max-height:340px">
+        <table class="w-full" style="min-width:520px">
+          <thead class="sticky top-0 z-10"><tr>
+            <th class="py-2 pl-3 font-semibold text-left">ที่มาของผลต่าง</th>
+            <th class="py-2 font-semibold text-right">ราย</th>
+            <th class="py-2 font-semibold text-right">ผลต่าง (บาท)</th>
+            <th class="py-2 font-semibold text-right">% ของยอดปีก่อน</th>
+            <th class="py-2 pr-3 font-semibold text-left">รายใหญ่ที่สุด</th>
+          </tr></thead>
+          <tbody id="tbBridge"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRIORITY -->
+  <section class="card p-4">
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <h2 class="sec-title">🚦 สรุปตามระดับความเร่งด่วน (Priority Breakdown)</h2>
+      <span class="text-[10.5px] text-slate-400">นับจากใบเสนอราคาในขอบเขตที่เลือก</span>
+    </div>
+    <div class="overflow-x-auto rounded-xl border border-slate-100 dark:border-slate-800">
+      <table class="w-full text-[12.5px]">
+        <thead><tr>
+          <th class="py-2.5 pl-3 font-semibold text-left">ระดับ</th>
+          <th class="py-2.5 font-semibold text-right">จำนวนใบ</th>
+          <th class="py-2.5 font-semibold text-right">% ของใบทั้งหมด</th>
+          <th class="py-2.5 font-semibold text-right">รายได้ (บาท)</th>
+          <th class="py-2.5 font-semibold text-right">% ของรายได้</th>
+          <th class="py-2.5 pr-3 font-semibold text-right">Lead Time เฉลี่ย (วัน)</th>
+        </tr></thead>
+        <tbody id="tbPriority"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section class="card p-4">
+    <h2 class="sec-title mb-3">👤 ผลงานรายผู้ติดต่อฝั่งลูกค้า (Contact Performance · Top 10)</h2>
+    <div class="tbl-scroll rounded-xl border border-slate-100 dark:border-slate-800">
+      <table class="w-full text-[12.5px]">
+        <thead><tr>
+          <th class="py-2.5 pl-3 font-semibold text-left">#</th>
+          <th class="py-2.5 font-semibold text-left">ชื่อผู้ติดต่อ</th>
+          <th class="py-2.5 font-semibold text-right">ใบเสนอราคา</th>
+          <th class="py-2.5 font-semibold text-right">ลูกค้าที่ดูแล</th>
+          <th class="py-2.5 pr-3 font-semibold text-right">รายได้รวม (บาท)</th>
+        </tr></thead>
+        <tbody id="tbContact"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- TEST BY MONTH -->
+  <section class="card p-4">
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <h2 id="tmTitle" class="sec-title">🧫 จำนวนรายการทดสอบรายเดือน</h2>
+      <div class="flex items-center gap-2 no-print flex-wrap">
+        <select id="fMetric" class="sel">
+          <option value="cnt" selected>วัดเป็น: จำนวนรายการ</option>
+          <option value="rev">วัดเป็น: รายได้ (บาท)</option>
+        </select>
+        <select id="fDim" class="sel">
+          <option value="param" selected>แยกตามรายการทดสอบ</option>
+          <option value="svc">แยกตามกลุ่มบริการ</option>
+        </select>
+        <select id="fTopN" class="sel">
+          <option value="5">Top 5</option><option value="8" selected>Top 8</option>
+          <option value="12">Top 12</option><option value="0">แสดงทั้งหมด</option>
+        </select>
+        <select id="fStack" class="sel">
+          <option value="1" selected>ซ้อนแท่ง (Stacked)</option>
+          <option value="0">แยกแท่ง (Grouped)</option>
+        </select>
+        <label class="flex items-center gap-1.5 text-[11.5px] cursor-pointer select-none">
+          <input id="fHideOther" type="checkbox" class="accent-irpc-600 w-4 h-4 rounded"> ซ่อน "อื่นๆ"
+        </label>
+      </div>
+    </div>
+    <div class="h-tm"><canvas id="chTestMonth"></canvas></div>
+    <div id="tmSummary" class="flex flex-wrap gap-1.5 mt-3"></div>
+    <p id="tmNote" class="sub-xs mt-2">—</p>
+  </section>
+
+  <!-- TOP TESTS -->
+  <section class="card p-4">
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <h2 class="sec-title">รายการทดสอบที่สร้างรายได้สูงสุด <span class="text-[11px] font-normal text-sky-500">· Top 50</span></h2>
+      <div class="flex items-center gap-2 flex-wrap">
+        <span id="topTestShare" class="chip text-[11px]">–</span>
+        <button id="btnTopTestsXlsx" class="btn no-print bg-irpc-600 hover:bg-irpc-700 text-white" style="padding:6px 12px;font-size:12px" title="ส่งออก Top 50 ตามตัวกรองที่เลือกอยู่">⬇ Export Top 50 (Excel)</button>
+      </div>
+    </div>
+    <p class="text-[10.5px] text-slate-400 mb-2">*ปันส่วนรายได้เฉลี่ยตามจำนวนรายการทดสอบในใบนั้น · ไม่รวมตัวอย่างสถานะ Initial / Cancelled · เลื่อนดูได้ทั้ง 50 รายการ</p>
+    <div class="tbl-list rounded-xl border border-slate-100 dark:border-slate-800" style="max-height:560px">
+      <table class="w-full text-[12.5px]">
+        <thead class="sticky top-0 z-10"><tr>
+          <th class="py-2.5 pl-3 font-semibold text-left">#</th>
+          <th class="py-2.5 font-semibold text-left">รายการทดสอบ</th>
+          <th class="py-2.5 font-semibold text-left">กลุ่มบริการ</th>
+          <th class="py-2.5 font-semibold text-right">ตัวอย่าง</th>
+          <th class="py-2.5 font-semibold text-right">ทดสอบ</th>
+          <th class="py-2.5 font-semibold text-right">Lead Time (วัน)</th>
+          <th class="py-2.5 font-semibold text-right">รายได้ (บาท)</th>
+          <th class="py-2.5 font-semibold text-right">%</th>
+          <th class="py-2.5 pr-3 font-semibold text-right">% สะสม</th>
+        </tr></thead>
+        <tbody id="tbTop"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- INSIGHTS -->
+  <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="card p-4">
+      <h2 class="sec-title mb-3">💡 Insights จากข้อมูล</h2>
+      <ul id="ulInsight" class="space-y-2 text-[12.5px] leading-relaxed"></ul>
+    </div>
+    <div class="card p-4">
+      <h2 class="sec-title mb-3">🎯 ข้อเสนอแนะ (Recommendations)</h2>
+      <ul id="ulRecom" class="space-y-2 text-[12.5px] leading-relaxed"></ul>
+    </div>
+  </section>
+
+  <!-- HEALTH -->
+  <details id="secDefs" class="card p-4 defs">
+    <summary>
+      <h2 class="sec-title">📖 นิยามและวิธีคำนวณ (อ่านก่อนนำตัวเลขไปใช้ต่อ)</h2>
+      <span class="defs-arrow text-lg no-print">▾</span>
+    </summary>
+    <div id="defsLive" class="defs-box mt-3 text-[12px] text-slate-600 dark:text-slate-300 leading-relaxed">—</div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-3">
+      <dl class="defs-box">
+        <dt>💰 รายได้</dt>
+        <dd>ใช้ราคาในใบเสนอราคา (1 ใบ นับ 1 ครั้ง) และจัดเข้าปี/เดือนตาม <b>วันที่รับคำขอ (Request Date)</b> ไม่ใช่วันที่ออกบิลหรือรับเงิน ไม่นับใบที่สถานะ created, cancel/cancelled, reject/rejected · ระดับตัวอย่าง: ตัดตัวอย่างที่สถานะ Initial และ Cancelled ออกจากจำนวนตัวอย่าง รายการทดสอบ และ Lead Time</dd>
+        <dt>🧹 การตัดข้อมูลซ้ำ</dt>
+        <dd>แถวที่เลขที่ใบเสนอราคาเดียวกันและเป็นคำขอเดียวกัน ถือเป็น revision ใช้เฉพาะบันทึกแรกสุด (recNo ต่ำสุด) · เลขเดียวกันแต่คนละลูกค้า/Lab/ปี นับเป็นคนละใบ · เลขที่เป็นค่าแทน เช่น "-", "N/A", "0" ถือว่าไม่มีเลขที่ใบ</dd>
+        <dt>🏢 ชื่อลูกค้า</dt>
+        <dd>รวมชื่อที่พิมพ์ต่างกันเล็กน้อยเป็นรายเดียวกันอัตโนมัติ (ปิดได้ในตัวเลือก) รายชื่อภายในองค์กรที่ตั้งไว้ในรายการยกเว้นจะไม่นับเป็นลูกค้าใหม่/เสี่ยงหาย/รายได้ลดลง</dd>
+        <dt>🌱 ลูกค้าใหม่</dt>
+        <dd>บริษัทที่ <b>ปีแรกที่พบใบเสนอราคา</b> (จากข้อมูลทั้งไฟล์ ไม่ขึ้นกับตัวกรอง) ตรงกับปีที่เลือก · โหมด Cohort นับรายได้เฉพาะเดือนที่ได้ลูกค้ามา, โหมดทุกเดือนนับรายได้ทั้งปีของลูกค้าใหม่ · <i>ข้อควรระวัง:</i> ปีแรกสุดของข้อมูลแยกลูกค้าใหม่จริงไม่ได้</dd>
+        <dt>⏱ Lead Time</dt>
+        <dd>วันที่เสร็จ − วันที่รับคำขอ ต่อตัวอย่าง (ใช้เฉพาะค่า 0 ถึงน้อยกว่า 400 วัน) แล้วเฉลี่ยเป็นต่อใบ · เกณฑ์สี: ≤ 7 วันเขียว, ≤ 14 วันเหลือง, มากกว่านั้นแดง · P90 = 90% ของงานเสร็จภายในจำนวนวันนี้</dd>
+      </dl>
+      <dl class="defs-box">
+        <dt>⚠️ ลูกค้าเสี่ยงหาย (At-Risk)</dt>
+        <dd>มียอดในปีก่อนทั้งปี แต่ปีที่เลือกยังไม่มีใบเสนอราคาเลย · "ห่างหายมา" นับเดือนจากวันที่สั่งล่าสุดถึงวันที่เปิดรายงาน (แดง ≥ 9 เดือน, เหลือง 4–8 เดือน)</dd>
+        <dt>📉 ลูกค้ารายได้ลดลงมาก</dt>
+        <dd>มียอดทั้งสองปีในช่วงเวลาเดียวกัน แต่ยอดปีนี้ลดลงตั้งแต่เกณฑ์ที่เลือก (30/50/70%) และยอดปีก่อนไม่ต่ำกว่าขั้นต่ำที่เลือก · ไม่รวมลูกค้าที่ยอดเป็นศูนย์ ซึ่งอยู่ในกลุ่มเสี่ยงหาย</dd>
+        <dt>📊 YoY และช่วงเวลาที่เทียบ</dt>
+        <dd>เทียบกับ <b>ช่วงเดียวกันของปีก่อน</b> · เลือกเดือนไว้ → เทียบเฉพาะเดือนนั้น · ไม่เลือกและเป็นปีล่าสุด → YTD ถึงเดือนล่าสุดที่มีข้อมูล · ปีที่ครบแล้ว → ทั้งปี · ใช้ตัวกรองบริษัท/Lab/สถานะที่เลือกกับทั้งสองปี</dd>
+        <dt>🧭 Revenue Bridge</dt>
+        <dd>แยกผลต่าง YoY รายลูกค้าเป็น 5 ที่มา: <b>ลูกค้าใหม่</b> (ปีแรกที่พบคือปีนี้) · <b>กลับมา</b> (ไม่มียอดปีก่อนแต่เคยซื้อมาก่อนหน้านั้น) · <b>ซื้อเพิ่ม</b> · <b>ซื้อลด</b> · <b>หายไป</b> (ปีนี้ไม่มียอด) ผลรวมทั้งห้าเท่ากับผลต่าง YoY รวมพอดี</dd>
+        <dt>🔁 Retention / Churn</dt>
+        <dd>ฐาน = ลูกค้าที่มียอดในปีก่อนทั้งปี · Retention = สัดส่วนที่ยังมียอดในปีนี้, Churn = ที่ยังไม่มี</dd>
+        <dt>✅ อัตราปิดงาน</dt>
+        <dd>สัดส่วนใบเสนอราคาที่สถานะเป็น completed, complete, closed, finished หรือ approved</dd>
+      </dl>
+    </div>
+  </details>
+
+  <section class="card p-4 no-print">
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-2">
+      <h2 class="sec-title">🩺 Data Health Check · ตรวจสอบคุณภาพข้อมูลต้นทาง</h2>
+      <div class="flex items-center gap-2">
+        <span id="hcScore" class="text-[11px] font-bold px-3 py-1 rounded-lg">–</span>
+        <button id="btnHcExport" class="btn bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 no-print">⬇ ส่งออกรายการที่ต้องแก้</button>
+      </div>
+    </div>
+    <div id="hcList" class="grid grid-cols-1 md:grid-cols-2 gap-2.5"></div>
+    <div id="hcDetail" class="mt-3"></div>
+  </section>
+
+  <footer class="text-center text-[11.5px] text-slate-400 py-6">
+    IRPC Testing Services: Outside Revenue Performance · v3.26 · ประมวลผลฝั่ง Client ทั้งหมด ข้อมูลไม่ถูกส่งออกนอกเครื่อง
+  </footer>
+</main>
+
+<!-- MODAL: COMPANY DRILL-DOWN -->
+<div id="compModal" class="modal fixed inset-0 z-[60] flex items-center justify-center p-4 hidden">
+  <div class="card bg-white dark:bg-slate-900 w-full max-w-3xl p-6 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto">
+    <div class="flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+      <div class="min-w-0">
+        <h3 id="mCompName" class="text-base font-bold text-irpc-800 dark:text-sky-400">—</h3>
+        <p id="mCompMeta" class="text-[11px] text-slate-400 mt-0.5">—</p>
+      </div>
+      <button id="btnCloseCompModal" class="text-slate-400 hover:text-slate-600 text-xl font-bold shrink-0">✕</button>
+    </div>
+    <div class="flex items-center gap-2 flex-wrap -mt-1">
+      <span class="text-[11px] text-slate-400">แสดงข้อมูล:</span>
+      <select id="mCompScope" class="sel">
+        <option value="scope">ตามตัวกรอง</option>
+        <option value="all">ทุกปี</option>
+      </select>
+      <span id="mCompScopeNote" class="text-[11px] text-amber-600"></span>
+    </div>
+    <div id="mCompStats" class="grid grid-cols-2 md:grid-cols-4 gap-3"></div>
+    <div>
+      <h4 id="mCompHistTitle" class="text-[12px] font-semibold text-slate-600 dark:text-slate-300 mb-1.5">รายได้รายเดือน</h4>
+      <div class="h-modal"><canvas id="chCompHist"></canvas></div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <h4 class="text-[12px] font-semibold text-slate-600 dark:text-slate-300 mb-1.5">รายการทดสอบที่ใช้บ่อย</h4>
+        <div id="mCompTests" class="space-y-1.5 text-[12px]"></div>
+      </div>
+      <div>
+        <h4 class="text-[12px] font-semibold text-slate-600 dark:text-slate-300 mb-1.5">ผู้ติดต่อ / ชื่อพ้องที่รวม</h4>
+        <div id="mCompContacts" class="space-y-1.5 text-[12px]"></div>
+      </div>
+    </div>
+    <div>
+      <h4 id="mCompQTitle" class="text-[12px] font-semibold text-slate-600 dark:text-slate-300 mb-1.5">ใบเสนอราคาล่าสุด (15 ใบ)</h4>
+      <div class="tbl-scroll rounded-xl border border-slate-100 dark:border-slate-800" style="max-height:220px">
+        <table class="w-full text-[12px]">
+          <thead class="sticky top-0 bg-slate-50 dark:bg-slate-800 z-10"><tr>
+            <th class="py-2 pl-3 text-left">เลขที่</th>
+            <th class="py-2 text-left">วันที่</th>
+            <th class="py-2 text-left">สถานะ</th>
+            <th class="py-2 text-left">ผู้รับผิดชอบ</th>
+            <th class="py-2 text-left">ด่วน</th>
+            <th class="py-2 text-left">กลุ่มบริการ</th>
+            <th class="py-2 pr-3 text-right">ยอดเงิน (บาท)</th>
+          </tr></thead>
+          <tbody id="mCompTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: EXCLUDE -->
+<div id="exclModal" class="modal fixed inset-0 z-50 flex items-center justify-center p-4 hidden">
+  <div class="card bg-white dark:bg-slate-900 w-full max-w-lg p-6 space-y-4 shadow-2xl">
+    <div class="flex items-center justify-between">
+      <h3 class="text-base font-bold text-irpc-800 dark:text-sky-400">⚙️ จัดการรายชื่อยกเว้น (ไม่นับเป็นลูกค้าใหม่)</h3>
+      <button id="btnCloseModal" class="text-slate-400 hover:text-slate-600 text-lg font-bold">✕</button>
+    </div>
+    <p class="text-[12px] text-slate-500 dark:text-slate-400">เพิ่มชื่อบริษัทหรือรหัสหน่วยงานภายในที่ไม่ต้องการให้นับเป็นลูกค้าใหม่ · บันทึกในเครื่องอัตโนมัติ</p>
+    <div class="flex gap-2">
+      <input id="inExclName" type="text" class="sel flex-1" placeholder="พิมพ์ชื่อบริษัทที่ต้องการยกเว้น...">
+      <button id="btnAddExcl" class="btn bg-irpc-600 text-white hover:bg-irpc-700">เพิ่ม</button>
+    </div>
+    <div class="tbl-scroll border border-slate-200 dark:border-slate-700 rounded-xl p-3 max-h-[200px]">
+      <div id="exclTags" class="flex flex-wrap gap-1.5"></div>
+    </div>
+    <div class="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
+      <button id="btnExclReset" class="btn bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 text-slate-600 dark:text-slate-300">คืนค่าเริ่มต้น</button>
+      <button id="btnSaveExcl" class="btn bg-irpc-600 text-white hover:bg-irpc-700">บันทึกและปิด</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+/* ========== SAFE DOM HELPERS ========== */
+const $=id=>document.getElementById(id);
+const setTxt=(id,v)=>{const e=$(id); if(e) e.textContent=v;};
+const setHtml=(id,v)=>{const e=$(id); if(e) e.innerHTML=v;};
+const setCls=(id,v)=>{const e=$(id); if(e) e.className=v;};
+const setStyle=(id,k,v)=>{const e=$(id); if(e) e.style[k]=v;};
+const on=(id,ev,fn)=>{const e=$(id); if(e) e.addEventListener(ev,fn);};
+function toast(msg,ms=2600){const t=$('toast'); if(!t)return; t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),ms);}
+
+/* ========== CONFIG & KPI (NEW THRESHOLDS) ========== */
+const KPI_Y = { L1:17000000, L2:17000000, L3:18000000, L4:19000000, L5:20000000 };
+const KPI_M = { L1:1416666.67, L2:1416666.67, L3:1500000.00, L4:1583333.33, L5:1666666.67 };
+const KPI_Q_L3 = KPI_M.L3 * 3;
+
+function kpiLevelYear(v){
+  if(v>=20000000) return 'L5';
+  if(v>=19000000) return 'L4';
+  if(v>=18000000) return 'L3';
+  if(v>=17000000) return 'L2';
+  return 'L1';
+}
+function kpiLevelMonth(v){
+  if(v>=1666666.67) return 'L5';
+  if(v>=1583333.33) return 'L4';
+  if(v>=1500000.00) return 'L3';
+  if(v>=1416666.67) return 'L2';
+  return 'L1';
+}
+
+const LEVEL_STYLE = {
+  L1:{bg:'bg-rose-50 dark:bg-rose-950/40',text:'text-rose-600 dark:text-rose-400',bar:'#e11d48',label:'L1 (<17M)'},
+  L2:{bg:'bg-amber-50 dark:bg-amber-950/40',text:'text-amber-600 dark:text-amber-400',bar:'#f59e0b',label:'L2 (17M+)'},
+  L3:{bg:'bg-emerald-50 dark:bg-emerald-950/40',text:'text-emerald-600 dark:text-emerald-400',bar:'#10b981',label:'L3 (18M+)'},
+  L4:{bg:'bg-blue-50 dark:bg-blue-950/40',text:'text-blue-600 dark:text-blue-400',bar:'#0072BC',label:'L4 (19M+)'},
+  L5:{bg:'bg-blue-50 dark:bg-blue-950/40',text:'text-blue-700 dark:text-blue-300',bar:'#003E7E',label:'L5 (20M+)'}
+};
+const EXCLUDE_STATUS = ['created','cancel','cancelled','reject','rejected'];
+/* ใบเสนอราคาที่กำหนดเองว่าให้ยึดข้อมูลจากบันทึก (recNo) ไหน พร้อมราคาและชื่อลูกค้าที่ถูกต้อง
+   รูปแบบ: 'เลขที่ใบเสนอราคา': {recNo, price, company}  (ไม่ใส่ price/company = ใช้ค่าจาก recNo นั้น) */
+const QUOTE_OVERRIDE = {
+  'ALC-26020173': {recNo:4, price:48150, company:'นิคมอุตสาหกรรม ซีพีจีซี'}
+};
+const coKey=n=>String(n||'').toLowerCase().replace(/บริษัท|จำกัด|จํากัด|\(มหาชน\)|co\.?,?\s*ltd\.?|company|limited|\(.*?\)|[\s\.,\-]/g,'');
+const EXCLUDE_SAMPLE_STATUS = ['initial','cancel','cancelled'];   // สถานะตัวอย่างที่ไม่นำมาแสดง/คำนวณ
+const DONE_STATUS = ['completed','complete','closed','finished','approved'];
+const MONTH_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const PALETTE = ['#0072BC','#00A0E9','#003E7E','#3b9ffb','#60bdff','#14b8a6','#6366f1','#0ea5e9','#8b5cf6','#f59e0b','#ef4444','#22c55e',
+                 '#ec4899','#84cc16','#06b6d4','#a855f7','#f97316','#64748b'];
+const LT_GOOD = 7, LT_WARN = 14;
+const DEFAULT_EXCL = ['IRPC4504NB01','IRPC Public Company Limited','บริษัท ไออาร์พีซี จำกัด (มหาชน)','IRPC'];
+
+/* ========== PRIORITY ========== */
+const RE_EXPRESS = /express|ด่วนที่สุด|ด่วนมาก|super|vip/i;
+const RE_URGENT  = /urgent|rush|hot|ด่วน|เร่ง/i;
+function prioClass(v){
+  const s=String(v||'').trim();
+  if(!s) return 'Normal';
+  if(RE_EXPRESS.test(s)) return 'Express';
+  if(RE_URGENT.test(s))  return 'Urgent';
+  return 'Normal';
+}
+
+/* ========== EXCLUDE LIST ========== */
+let MANUAL_OLD_CUSTOMERS = [];
+try{ MANUAL_OLD_CUSTOMERS = JSON.parse(localStorage.getItem('irpc_excl_cust')) || DEFAULT_EXCL.slice(); }
+catch(e){ MANUAL_OLD_CUSTOMERS = DEFAULT_EXCL.slice(); }
+let OLD_SET = new Set();
+function updateOldSet(){
+  OLD_SET = new Set(MANUAL_OLD_CUSTOMERS.map(s=>String(s).trim().toLowerCase()));
+  try{ localStorage.setItem('irpc_excl_cust', JSON.stringify(MANUAL_OLD_CUSTOMERS)); }catch(e){}
+}
+updateOldSet();
+const isExcludedCustomer = c => OLD_SET.has(String(c||'').trim().toLowerCase());
+const MANUAL_MAP = {};
+
+/* ========== FORMAT ========== */
+const nf0 = new Intl.NumberFormat('th-TH',{maximumFractionDigits:0});
+const nf1 = new Intl.NumberFormat('th-TH',{minimumFractionDigits:1,maximumFractionDigits:1});
+const nf2 = new Intl.NumberFormat('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2});
+const money = v => nf2.format(v||0);
+const num   = v => nf0.format(Math.round(v||0));
+const day1  = v => (v==null||isNaN(v))?'—':nf1.format(v);
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ymd = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const thDate = d => d?d.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'}):'—';
+const compLink = n => `<span class="comp-link" data-comp="${esc(n)}">${esc(n)}</span>`;
+
+/* ========== NAME CLEAN ENGINE ========== */
+const TH_ALPHA = [
+  ['ดับเบิลยู','w'],['ดับบลิว','w'],['เอ็กซ์','x'],['เอ็กส์','x'],
+  ['เอ็ม','m'],['เอ็น','n'],['เอส','s'],['เอฟ','f'],['เอช','h'],['แซด','z'],
+  ['อาร์','r'],['แอล','l'],['วาย','y'],['คิว','q'],['ยู','u'],['ที','t'],
+  ['พี','p'],['โอ','o'],['เจ','j'],['ไอ','i'],['จี','g'],['อี','e'],['ดี','d'],
+  ['ซี','c'],['บี','b'],['วี','v'],['เค','k'],['เอ','a']
+];
+const TH_MAP = {
+  'ก':'k','ข':'kh','ฃ':'kh','ค':'kh','ฅ':'kh','ฆ':'kh','ง':'ng',
+  'จ':'ch','ฉ':'ch','ช':'ch','ซ':'s','ฌ':'ch','ญ':'y','ฎ':'d','ฏ':'t',
+  'ฐ':'th','ฑ':'th','ฒ':'th','ณ':'n','ด':'d','ต':'t','ถ':'th','ท':'th','ธ':'th',
+  'น':'n','บ':'b','ป':'p','ผ':'ph','ฝ':'f','พ':'ph','ฟ':'f','ภ':'ph','ม':'m',
+  'ย':'y','ร':'r','ล':'l','ว':'w','ศ':'s','ษ':'s','ส':'s','ห':'h','ฬ':'l','อ':'','ฮ':'h',
+  'ะ':'a','ั':'a','า':'a','ำ':'am','ิ':'i','ี':'i','ึ':'u','ื':'u','ุ':'u','ู':'u',
+  'เ':'e','แ':'ae','โ':'o','ใ':'ai','ไ':'ai','ๅ':'a','ๆ':'',
+  '็':'','่':'','้':'','๊':'','๋':'','์':'','ฺ':'','ํ':'','ฯ':'',
+  '๐':'0','๑':'1','๒':'2','๓':'3','๔':'4','๕':'5','๖':'6','๗':'7','๘':'8','๙':'9'
+};
+const STOP_RE = new RegExp([
+  'บริษัท','บมจ','บจก','หจก','จำกัด','จํากัด','มหาชน','ประเทศไทย','ไทยแลนด์','กรุ๊ป','กลุ่ม','สาขา','สำนักงานใหญ่','สํานักงานใหญ่',
+  'company','companies','limited','ltd','public','pcl','plc','co','corp','corporation','inc','incorporated',
+  'thailand','thai','group','holdings','holding','international','intl','industry','industries','industrial',
+  'enterprise','enterprises','trading','technology','technologies','tech','service','services','solution','solutions',
+  'manufacturer','manufacturing','mfg','branch','headquarter','hq','the','and'
+].join('|'),'gi');
+
+function thaiToLatin(s){
+  let t=s;
+  TH_ALPHA.forEach(([th,en])=>{ t=t.split(th).join(' '+en+' '); });
+  let out='';
+  for(const ch of t){ out += (TH_MAP[ch]!==undefined)?TH_MAP[ch]:ch; }
+  return out;
+}
+function nameKey(raw){
+  let s=String(raw||'').toLowerCase().trim();
+  s=s.replace(/\u0e33/g,'ำ');
+  s=s.replace(/[()[\]{}.,\-_/\\'"&+#@·•]/g,' ');
+  s=s.replace(STOP_RE,' ');
+  if(/[\u0e00-\u0e7f]/.test(s)) s=thaiToLatin(s);
+  return s.toLowerCase().replace(/[^a-z0-9]/g,'');
+}
+const skeletonKey = k => k.replace(/[aeiou]/g,'');
+function levenshtein(a,b){
+  if(a===b) return 0;
+  const m=a.length,n=b.length;
+  if(!m) return n; if(!n) return m;
+  let prev=new Array(n+1),curr=new Array(n+1);
+  for(let j=0;j<=n;j++) prev[j]=j;
+  for(let i=1;i<=m;i++){
+    curr[0]=i;
+    for(let j=1;j<=n;j++) curr[j]=Math.min(prev[j]+1,curr[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));
+    [prev,curr]=[curr,prev];
+  }
+  return prev[n];
+}
+function similarity(a,b){ const L=Math.max(a.length,b.length); return L?1-levenshtein(a,b)/L:1; }
+
+function buildNameMap(rawStats,opt){
+  const names=Object.keys(rawStats), map={}, groups=[];
+  if(!opt.auto){
+    names.forEach(n=>{ map[n]=MANUAL_MAP[n]||n; });
+    return {map,groups};
+  }
+  const buckets={};
+  names.forEach(n=>{
+    if(MANUAL_MAP[n]) return;
+    const k=nameKey(n)||('_'+n);
+    (buckets[k]=buckets[k]||[]).push(n);
+  });
+  let keys=Object.keys(buckets);
+  if(opt.fuzzy){
+    const merged=new Set(), blocks={};
+    keys.forEach(k=>{ const bk=k.slice(0,2)||'__'; (blocks[bk]=blocks[bk]||[]).push(k); });
+    Object.values(blocks).forEach(bk=>{
+      for(let i=0;i<bk.length;i++){
+        if(merged.has(bk[i])) continue;
+        for(let j=i+1;j<bk.length;j++){
+          if(merged.has(bk[j])) continue;
+          const a=bk[i],b=bk[j];
+          if(!a||!b||a.length<3||b.length<3) continue;
+          const sim=similarity(a,b);
+          const skel=similarity(skeletonKey(a),skeletonKey(b));
+          const contain=(a.length>=5&&b.length>=5)&&(a.includes(b)||b.includes(a));
+          if(sim>=opt.th||skel>=Math.min(0.95,opt.th+0.06)||contain){
+            buckets[a]=buckets[a].concat(buckets[b]); delete buckets[b]; merged.add(b);
+          }
+        }
+      }
+    });
+    keys=Object.keys(buckets);
+  }
+  keys.forEach(k=>{
+    const members=buckets[k];
+    const canonical=members.slice().sort((a,b)=>
+      (rawStats[b].n-rawStats[a].n)||(rawStats[b].rev-rawStats[a].rev)||(b.length-a.length))[0];
+    members.forEach(m=>{ map[m]=canonical; });
+    if(members.length>1){
+      const exact=new Set(members.map(nameKey)).size===1;
+      groups.push({canonical,members,type:exact?'exact':'fuzzy',
+        n:members.reduce((s,m)=>s+rawStats[m].n,0),
+        rev:members.reduce((s,m)=>s+rawStats[m].rev,0)});
+    }
+  });
+  Object.entries(MANUAL_MAP).forEach(([o,c])=>{
+    if(!rawStats[o]) return;
+    map[o]=c;
+    groups.push({canonical:c,members:[o],type:'manual',n:rawStats[o].n,rev:rawStats[o].rev});
+  });
+  groups.sort((a,b)=>(b.rev||0)-(a.rev||0));
+  return {map,groups};
+}
+
+/* ========== DATE ========== */
+let DATE_ORDER='MDY';
+function detectDateOrder(samples){
+  let dmy=0,mdy=0;
+  for(const s of samples){
+    if(!s||typeof s!=='string') continue;
+    const p=s.trim().split(/[\/\-\s:.]+/).filter(Boolean);
+    if(p.length<3) continue;
+    const a=+p[0],b=+p[1];
+    if(a>12&&b<=12) dmy++;
+    if(b>12&&a<=12) mdy++;
+  }
+  return dmy>mdy?'DMY':'MDY';
+}
+function parseDate(v){
+  if(v===null||v===undefined||v==='') return null;
+  if(v instanceof Date&&!isNaN(v)) return v;
+  if(typeof v==='number'){ const d=new Date(Math.round((v-25569)*86400000)); return isNaN(d)?null:d; }
+  const str=String(v).trim();
+  if(/^\d{4}-\d{1,2}-\d{1,2}/.test(str)){
+    const p=str.split(/[-T\s:]+/).map(Number);
+    const dt=new Date(p[0],p[1]-1,p[2],p[3]||0,p[4]||0);
+    return isNaN(dt)?null:dt;
+  }
+  const p=str.split(/[\/\-\s:.]+/).filter(Boolean);
+  if(p.length<3) return null;
+  let d,m; if(DATE_ORDER==='DMY'){d=+p[0];m=+p[1];}else{m=+p[0];d=+p[1];}
+  let y=+p[2]; if(y<100)y+=2000; if(y>2400)y-=543;
+  const dt=new Date(y,m-1,d,+p[3]||0,+p[4]||0);
+  return isNaN(dt)?null:dt;
+}
+
+/* ========== MOCK DATA ========== */
+function mulberry32(a){
+  return function(){
+    a|=0; a=a+0x6D2B79F5|0;
+    let t=Math.imul(a^a>>>15,1|a);
+    t=t+Math.imul(t^t>>>7,61|t)^t;
+    return ((t^t>>>14)>>>0)/4294967296;
+  };
+}
+function buildMock(){
+  const rnd=mulberry32(20260908);
+  const pick=a=>a[Math.floor(rnd()*a.length)];
+  const staff=['karn.a','karn.a','wanwisa.k','wanwisa.k','supakorn.y','sasithon.w','chatchai.wa','pimchanok.s'];
+  const companies=[
+    ['VSL Systems Manufacturer (Thailand) Co., Ltd.',1.6,['VSL Systems Manufacturer Thailand','วีเอสแอล ซิสเต็มส์']],
+    ['PTT Global Chemical Public Company Limited.',1.5,['PTT Global Chemical PCL','บริษัท พีทีที โกลบอล เคมิคอล จำกัด (มหาชน)']],
+    ['Intertek Testing Services (Thailand) Ltd.',1.3,['Intertek Testing Service Thailand','อินเตอร์เทค เทสติ้ง เซอร์วิสเซส']],
+    ['เอสจีเอส (ประเทศไทย)',1.2,['SGS (THAILAND) LIMITED.','SGS (Thailand) Limited']],
+    ['Zeon Chemicals (Thailand) Co.,Ltd.',1.0,['Zeon Chemicals (Thailand) Co., Ltd.','ซีออน เคมิคอลส์ (ประเทศไทย)']],
+    ['แอมสเปค (ประเทศไทย)',0.9,['AmSpec (Thailand) Co., Ltd.']],
+    ['Polyplex (Thailand) Public Company Limited',0.8,['โพลีเพล็กซ์ (ประเทศไทย) จำกัด (มหาชน)']],
+    ['Thai Polyethylene Co., Ltd.',0.8,['ไทย โพลีเอทิลีน จำกัด']],
+    ['บริษัท สยามราช จำกัด (มหาชน)',0.7,['บริษัท สยามราช จํากัด (มหาชน)','Siam Rach Public Company Limited']],
+    ['บริษัท เอส-ปาร์ค คอร์ปอเรชั่น จำกัด',0.6,[]],
+    ['UBE Technical Center (Asia) Limited',0.6,['ยูบีอี เทคนิคอล เซ็นเตอร์ (เอเชีย)']],
+    ['GC-M PTA Co., Ltd.',0.6,[]],
+    ['อีลาสโตมิกซ์ (ประเทศไทย)',0.5,['Elastomix (Thailand) Co., Ltd.']],
+    ['ธิสเซ่นครุปป์ อูเด้ห์ (ประเทศไทย)',0.5,[]],
+    ['Green Polymer Co.,Ltd',0.4,['กรีน โพลิเมอร์ จำกัด']],
+    ['บริษัทโซลเวย์ เพอรอกซิไทย จำกัด',0.4,[]],
+    ['บริษัทปัญจวัฒนาพลาสติกจำกัด (มหาชน)',0.4,[]],
+    ['เซเว่น ไวร์',0.3,['Seven Wire Co., Ltd.']],
+    ['อาร์พีที เอเชีย',0.3,['บริษัท อาร์พีที เอเชีย จำกัด']]
+  ];
+  const variants={}; companies.forEach(([n,w,a])=>{variants[n]=[n].concat(a||[]);});
+  const compPool=[]; companies.forEach(([n,w])=>{for(let i=0;i<Math.round(w*10);i++) compPool.push(n);});
+  const lost2025=['Ocean Petrochem Service Co., Ltd.','บริษัท ไทยรีไฟน์ แล็บ จำกัด','Delta Coating Industry Co., Ltd.'];
+  const newComers2026=[
+    ['บริษัท นิว เคมีคอล พาร์ทเนอร์ จำกัด',2],['Advanced Polymer Lab (Thailand) Co., Ltd.',3],
+    ['บริษัท กรีนเทค รีไซเคิล จำกัด',4],['Siam Bio-Energy Research Co., Ltd.',5],
+    ['บริษัท ไทยพลาสติก อินโนเวชั่น จำกัด',5],['Pacific Water Solutions (Thailand)',6],
+    ['บริษัท อีโค แมททีเรียล จำกัด',7],['Nano Coating Technology Co., Ltd.',8]
+  ];
+  const params=[
+    ['Gas (Component)','GC2 : D2504LE : Trace Oxygen, Nitrogen in Hydrocarbon','A3P-S4100-2221-4','L06',3200,5],
+    ['Gas (Component)','GC6 : D2504LE6 : Trace CO, CO2 in Noncondensable Gas','A3P-S4100-2231-1','L06',3450,5],
+    ['Gas (Component)','Dew Point and Moisture-Water (ppm wt) in BD Gases','A3P-S4100-2240-2','L06',2980,4],
+    ['Coal and Fuel','Determination of Carbon Hydrogen and Nitrogen','QPW-E1090-2004-T09-1','L08',4200,7],
+    ['Coal and Fuel','% Sulfur content (CHN)','QPW-E1090-2004-T09-2','L08',3800,7],
+    ['Water & Waste water','BOD','IPE-E7020-2003-W24','L09',900,6],
+    ['Water & Waste water','COD (Close Reflux)','IPE-E7020-2003-W15','L09',850,3],
+    ['Water & Waste water','TSS','IPE-E7020-2003-W11','L09',600,2],
+    ['Water & Waste water','pH','IPE-E7020-2003-W12','L09',350,1],
+    ['Water & Waste water','Oil&Grease (Gravimetric)','IPE-E7020-2003-W04','L09',1200,4],
+    ['Chemical','Chloride Content by IC','Chloride E2469','ALM',4494,6],
+    ['Chemical','Water content by Coulometer (D 6304)','A3P-S4100-2221-4','L11',2568,4],
+    ['Chemical','Potassium and Sodium Ion','A3P-S4100-2255-3','L11',2140,5],
+    ['Polymer (Plastic, Pipe)','Melt Flow Index (D1238)','PLM-2101-MFI','L02',1800,4],
+    ['Polymer (Plastic, Pipe)','Tensile Properties (D638)','PLM-2101-TEN','L02',2400,6],
+    ['Polymer (Plastic, Pipe)','Hydrostatic Pressure Test (D1598)','PLM-2103-HYD','L03',12800,22],
+    ['Polymer (Specialty Investigate)','FTIR Identification','PLM-2205-FTIR','L04',3210,5],
+    ['Polymer (Specialty Investigate)','DSC Thermal Analysis','PLM-2205-DSC','L04',3800,8],
+    ['Petroleum','Distillation (D86)','PET-3010-D86','L10',2500,3],
+    ['Petroleum','Flash Point (D93)','PET-3010-D93','L10',1900,3],
+    ['Leasing','ค่าเช่าพื้นที่ PW Lab','LEA-9001','ALM',18000,30]
+  ];
+  const labByLoc={'L02':'ALP','L03':'ALP','L04':'ALP','L06':'ALO','L08':'ALO','L09':'ALO','L10':'ALO','L11':'ALR','ALM':'ALC'};
+  const okStatus=['Completed','Completed','Completed','Completed','Completed','Waiting Approve','Accepted','InProgress','Received'];
+  const badStatus=['Created','Cancelled','Reject'];
+  const sampleNames=['Methanol','Ethylene Glycol','Waste water','Activated Carbon','BD Gas','HDPE Pellet','PP Compound','Diesel','Cooling Water','Recycled PET'];
+  const main=[],detail=[];
+  let reqSeq=0,sampSeq=0;
+  const plan=[]; for(let m=1;m<=12;m++)plan.push([2025,m]); for(let m=1;m<=9;m++)plan.push([2026,m]);
+  const fmt=d=>`${d.getMonth()+1}/${d.getDate()}/${String(d.getFullYear()).slice(2)} ${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`;
+  plan.forEach(([Y,M])=>{
+    const growth=Y===2026?1.18:1.0;
+    const target=(1050000+rnd()*750000)*growth*(M===9&&Y===2026?0.42:1);
+    let acc=0,guard=0;
+    const forcedNew=Y===2026?newComers2026.filter(x=>x[1]===M).map(x=>x[0]):[];
+    let fi=0;
+    while(acc<target&&guard++<200){
+      reqSeq++;
+      let compBase;
+      if(fi<forcedNew.length&&rnd()<0.35) compBase=forcedNew[fi++];
+      else if(Y===2025&&rnd()<0.05) compBase=pick(lost2025);
+      else compBase=pick(compPool);
+      const vs=variants[compBase];
+      const comp=vs?(rnd()<0.55?vs[0]:pick(vs)):compBase;
+      const dt=new Date(Y,M-1,1+Math.floor(rnd()*27),8+Math.floor(rnd()*9),Math.floor(rnd()*60));
+      const base=params[Math.floor(rnd()*params.length)];
+      const svc=base[0],loc=base[3],lab=labByLoc[loc];
+      const reqId=`E-${lab}-${String(Y).slice(2)}${String(M).padStart(2,'0')}-${String(reqSeq).padStart(5,'0')}`;
+      const qano=`${lab}-${String(Y).slice(2)}${String(M).padStart(2,'0')}${String(1000+reqSeq).slice(1)}`;
+      const nSample=1+Math.floor(rnd()*4);
+      let price=0; const dRows=[];
+      const pr=rnd();
+      const prioPick = pr<0.72 ? 'Normal' : pr<0.91 ? 'Urgent' : 'Express';
+      const speedUp = prioPick==='Express' ? 0.45 : prioPick==='Urgent' ? 0.7 : 1;
+      for(let s=0;s<nSample;s++){
+        sampSeq++;
+        const sid=`${lab}-${Y%100}${String(M).padStart(2,'0')}${String(100000+sampSeq).slice(1)}`;
+        const sname=pick(sampleNames), nTest=1+Math.floor(rnd()*3), used=new Set();
+        const pool=params.filter(x=>x[0]===svc);
+        for(let t=0;t<nTest;t++){
+          const p=pool[Math.floor(rnd()*pool.length)];
+          const key=p[2]+'|'+(t%2+1); if(used.has(key)) continue; used.add(key);
+          price+=p[4]*(0.9+rnd()*0.5)*(prioPick==='Express'?1.35:prioPick==='Urgent'?1.15:1);
+          const ltDays=Math.max(1,Math.round((p[5]*(0.7+rnd()*0.9)+(rnd()<0.08?rnd()*12:0))*speedUp));
+          const done=rnd()<0.9;
+          dRows.push({requestId:reqId,sampleId:sid,paramListId:p[2],variantId:String(t%2+1),
+            sampleStatus:done?'Completed':(rnd()<0.5?'Initial':'InProgress'),
+            lab,requestDate:fmt(dt),completeDate:done?fmt(new Date(dt.getTime()+ltDays*86400000)):null,
+            plant:'IRPC',sampleName:sname,sampleDesc:`${sname} from ${comp}`,
+            paramListDesc:p[1],serviceGroup:svc,forLab:loc,u_company:comp,compName:'IRPC4504NB01'});
+        }
+      }
+      price=Math.round(price*100)/100;
+      const st=pick(okStatus);
+      const row={requestId:reqId,modifyDate:fmt(new Date(dt.getTime()+86400000*3)),recNo:1,requestStatus:st,
+        requestBy:pick(staff),lab,requestDate:fmt(dt),createDate:fmt(dt),u_qano:qano,quantation:price,u_company:comp,
+        contactName:'Contact '+(1+Math.floor(rnd()*40)),serviceGroup:svc,labLocation:loc,
+        sPriority:prioPick,compName:'IRPC4504NB01'};
+      main.push(row);
+      main.push({...row,recNo:2,requestStatus:'Accepted',quantation:Math.round(price*0.5*100)/100});
+      main.push({...row,recNo:3,requestStatus:'Created',quantation:Math.round(price*0.5*100)/100});
+      detail.push(...dRows);
+      acc+=price;
+    }
+    for(let k=0;k<3;k++){
+      reqSeq++;
+      const comp=pick(compPool),dt=new Date(Y,M-1,1+Math.floor(rnd()*27),10,0);
+      const base=params[Math.floor(rnd()*params.length)],loc=base[3],lab=labByLoc[loc];
+      main.push({requestId:`E-${lab}-${String(Y).slice(2)}${String(M).padStart(2,'0')}-${String(reqSeq).padStart(5,'0')}`,
+        modifyDate:fmt(dt),recNo:1,requestStatus:pick(badStatus),requestBy:pick(staff),lab,requestDate:fmt(dt),createDate:fmt(dt),
+        u_qano:`${lab}-${String(Y).slice(2)}${String(M).padStart(2,'0')}${String(1000+reqSeq).slice(1)}`,
+        quantation:Math.round(rnd()*40000),u_company:comp,serviceGroup:base[0],labLocation:loc,
+        sPriority:'Normal',compName:'IRPC4504NB01'});
+    }
+  });
+  main.push({requestId:'E-ALO-2608-99001',recNo:1,requestStatus:'Completed',requestBy:'karn.a',lab:'ALO',
+    requestDate:'8/15/26 9:00',u_qano:'ALO-26089001',quantation:186000,
+    serviceGroup:'Chemical',labLocation:'L09',compName:'IRPC4504NB01'});
+  main.push({requestId:'E-ALO-2608-99002',recNo:1,requestStatus:'Completed',requestBy:'karn.a',lab:'ALO',
+    requestDate:'8/20/29 9:00',u_qano:'ALO-26089002',quantation:52000,u_company:'Zeon Chemicals (Thailand) Co., Ltd.',
+    serviceGroup:'Chemical',labLocation:'L09',compName:'IRPC4504NB01',sPriority:'Express'});
+  return {main,detail};
+}
+
+/* ========== STATE ========== */
+let RAW=buildMock();
+let MODEL=null,LAST=null,FC=null,LAST_TM=null,LAST_EXT=null,LAST_NC=null,LAST_CT=null,
+    LAST_PRIO=null,LAST_AT_RISK=[],LAST_SVC_YOY=null,LAST_BRIDGE=null,LAST_DECL=null;
+const STATE={year:null,months:new Set(),comp:new Set(),req:new Set(),samp:new Set(),lab:new Set(),
+  topN:8,stacked:true,dim:'param',metric:'cnt',hideOther:false,ltDim:'lab',ncMonth:'ALL',
+  ncMode:'cohort',autoClean:true,fuzzy:false,fuzzyTh:0.86,exclInternal:true};
+const CHARTS={};
+
+function norm(rows){
+  return (rows||[]).map(r=>{
+    const o={};
+    for(const k in r){ if(k!==undefined&&k!==null) o[String(k).trim().toLowerCase()]=r[k]; }
+    return o;
+  });
+}
+const G=(r,...keys)=>{
+  for(const k of keys){
+    const v=r[String(k).toLowerCase()];
+    if(v!==undefined&&v!==null&&v!=='') return v;
+  }
+  return null;
+};
+const A={
+  qano:['u_qano','qano','quotationno','quotation_no','quoteno'],
+  reqId:['requestid','request_id','requestno','request_no','jobid','job_id'],
+  recNo:['recno','rec_no','recordno','seq'],
+  status:['requeststatus','request_status','status','jobstatus'],
+  reqDate:['requestdate','request_date','createdate','create_date','docdate','date'],
+  compDate:['completedate','complete_date','finishdate','finish_date','closedate'],
+  price:['quantation','quotation','amount','price','total','netamount','revenue'],
+  company:['u_company','company','customer','customername','cust_name','ลูกค้า'],
+  compName:['compname','comp_name','companycode'],
+  lab:['lab','section'],
+  labLoc:['lablocation','lab_location','loc'],
+  svc:['servicegroup','service_group','svcgroup','servicetype'],
+  contact:['contactname','contact_name','contact','u_contactname'],
+  owner:['requestby','request_by','createdby','created_by','ผู้รับผิดชอบ','userlogon'],
+  prio:['spriority','s_priority','priority','urgency'],
+  sampleId:['sampleid','sample_id','sampleno','sample_no'],
+  sampleDesc:['sampledesc','sample_desc','samplename','sample_name'],
+  variantId:['variantid','variant_id','variant'],
+  paramId:['paramlistid','param_list_id','paramid','param_id','testid'],
+  paramDesc:['paramlistdesc','param_list_desc','paramdesc','testname','parameter','testdesc'],
+  sampStatus:['samplestatus','sample_status'],
+  forLab:['forlab','for_lab','location','plantloc']
+};
+
+/* ========== MODEL ========== */
+function buildModel(raw){
+  const mainN=norm(raw.main),detailN=norm(raw.detail);
+  DATE_ORDER=detectDateOrder(mainN.slice(0,500).map(r=>G(r,...A.reqDate)).filter(x=>typeof x==='string'));
+  const thisYear=new Date().getFullYear();
+  const H={zeroPrice:[],badDate:[],priceConflict:[],noQano:[],orphanDetail:[],noSampleId:0,future:[],old:[],
+           noComplete:0,noCompany:0,noPrio:[],noOwner:0,qanoReuse:[],qanoBlank:0,sampExcl:0};
+
+  const map=new Map(),priceSet=new Map(),qSig=new Map();
+  const BLANK_Q=/^(-+|n\/?a|null|none|0+|\(.*\)|tbd|xxx*)$/i;
+  mainN.forEach(r=>{
+    let q=G(r,...A.qano); const rid=G(r,...A.reqId);
+    if(q&&BLANK_Q.test(String(q).trim())){ H.qanoBlank++; q=null; }   // placeholder = no quote number
+    if(!q) H.noQano.push(String(rid||'-'));
+    let key=q?'Q:'+String(q).trim():'R:'+String(rid||Math.random());
+    if(q&&!QUOTE_OVERRIDE[String(q).trim()]){
+      // เลขที่เดียวกันแต่อยู่คนละคำขอ (requestId) และต่างลูกค้า/Lab/ปี => คนละใบ ไม่รวมกัน
+      // บันทึกต่าง ๆ ของคำขอเดียวกัน (revision / แก้ชื่อลูกค้า) ต้องรวมเป็นใบเดียวเสมอ
+      const dd=parseDate(G(r,...A.reqDate));
+      const sig=[coKey(G(r,...A.company)||G(r,...A.compName)||''),String(G(r,...A.lab)||'').trim(),dd?dd.getFullYear():''].join('|');
+      const qk=String(q).trim(), ridS=String(rid||''), f0=qSig.get(qk);
+      if(f0===undefined) qSig.set(qk,{sig,rid:ridS});
+      else if(ridS&&f0.rid!==ridS&&f0.sig!==sig){ key='Q:'+qk+'|'+ridS; H.qanoReuse.push({qano:qk,sig}); }
+    }
+    const rec=Number(G(r,...A.recNo))||9999;
+    const st=String(G(r,...A.status)||'').trim().toLowerCase();
+    if(q&&!EXCLUDE_STATUS.includes(st)){
+      const v=Math.round((Number(G(r,...A.price))||0)*100)/100;
+      if(!priceSet.has(key)) priceSet.set(key,new Set());
+      priceSet.get(key).add(v);
+    }
+    const prev=map.get(key);
+    const ov=q?QUOTE_OVERRIDE[String(q).trim()]:null;
+    const pinnedNow=!!ov&&Number(G(r,...A.recNo))===ov.recNo;
+    if(pinnedNow) map.set(key,{...r,_rec:rec,_pin:ov});
+    else if(!(prev&&prev._pin)&&(!prev||rec<prev._rec)) map.set(key,{...r,_rec:rec});
+  });
+  priceSet.forEach((set,k)=>{ if(set.size>1) H.priceConflict.push({qano:k.replace(/^Q:/,'').split('|')[0],prices:[...set]}); });
+
+  const rawStats={},pre=[];
+  map.forEach(r=>{
+    const st=String(G(r,...A.status)||'').trim();
+    if(EXCLUDE_STATUS.includes(st.toLowerCase())) return;
+    const d=parseDate(G(r,...A.reqDate));
+    const uc=(r._pin&&r._pin.company)||G(r,...A.company);
+    if(!uc) H.noCompany++;
+    const rawName=String(uc||G(r,...A.compName)||'ไม่ระบุลูกค้า').trim();
+    const rev=(r._pin&&r._pin.price!=null)?r._pin.price:(Number(G(r,...A.price))||0);
+    if(!rawStats[rawName]) rawStats[rawName]={n:0,rev:0};
+    rawStats[rawName].n++; rawStats[rawName].rev+=rev;
+    pre.push({r,st,d,rawName,rev});
+  });
+  const NM=buildNameMap(rawStats,{auto:STATE.autoClean,fuzzy:STATE.fuzzy,th:STATE.fuzzyTh});
+
+  let noSid=0,noComp=0;
+  const details=detailN.map(r=>{
+    const d=parseDate(G(r,...A.reqDate)), c=parseDate(G(r,...A.compDate));
+    const sid=G(r,...A.sampleId); if(!sid) noSid++;
+    let lt=null; if(d&&c){ const diff=(c-d)/86400000; if(diff>=0&&diff<400) lt=diff; }
+    if(!c) noComp++;
+    return {requestId:String(G(r,...A.reqId)||''),sampleId:sid?String(sid).trim():null,
+      sampleDesc:String(G(r,...A.sampleDesc)||''),variantId:String(G(r,...A.variantId)||''),
+      paramListId:String(G(r,...A.paramId)||''),paramDesc:String(G(r,...A.paramDesc)||'ไม่ระบุรายการทดสอบ').trim(),
+      sampleStatus:String(G(r,...A.sampStatus)||'ไม่ระบุ').trim(),lab:String(G(r,...A.lab)||'ไม่ระบุ').trim(),
+      loc:String(G(r,...A.forLab)||'ไม่ระบุ').trim(),svc:String(G(r,...A.svc)||'ไม่ระบุ').trim(),
+      leadTime:lt};
+  }).filter(x=>x.sampleId).filter(x=>{ if(EXCLUDE_SAMPLE_STATUS.includes(String(x.sampleStatus).toLowerCase())){ H.sampExcl++; return false; } return true; });
+  H.noSampleId=noSid; H.noComplete=noComp;
+
+  const ltByReq={};
+  details.forEach(d=>{ if(d.leadTime!=null)(ltByReq[d.requestId]=ltByReq[d.requestId]||[]).push(d.leadTime); });
+  const reqLead={}; Object.entries(ltByReq).forEach(([k,v])=>{ reqLead[k]=v.reduce((a,b)=>a+b,0)/v.length; });
+
+  const quotes=[];
+  pre.forEach(({r,st,d,rawName,rev})=>{
+    const qraw=G(r,...A.qano);
+    const qano=qraw?String(qraw).trim():'(ไม่มีเลขที่ใบเสนอราคา)';
+    if(!d){ H.badDate.push({qano,raw:String(G(r,...A.reqDate)||'(ว่าง)')}); return; }
+    if(d.getFullYear()>thisYear+1){ H.future.push({qano,d,company:rawName,rev}); return; }
+    if(d.getFullYear()<2020) H.old.push({qano,d});
+    if(rev<=0) H.zeroPrice.push({qano,status:st,company:rawName});
+    const rid=String(G(r,...A.reqId)||'');
+    const prioCell=G(r,...A.prio);
+    if(!prioCell) H.noPrio.push({qano,company:rawName});
+    const prioRaw=String(prioCell||'Normal').trim();
+    const ownerCell=G(r,...A.owner);
+    if(!ownerCell) H.noOwner++;
+    quotes.push({requestId:rid,qano,status:st||'ไม่ระบุ',revenue:rev,
+      company:NM.map[rawName]||rawName,companyRaw:rawName,
+      lab:String(G(r,...A.lab)||'ไม่ระบุ').trim(),loc:String(G(r,...A.labLoc)||'ไม่ระบุ').trim(),
+      svc:String(G(r,...A.svc)||'ไม่ระบุ').trim(),
+      contactName:String(G(r,...A.contact)||'ไม่ระบุ').trim(),
+      owner:String(ownerCell||'ไม่ระบุ').replace(/^.*\\/,'').trim(),
+      sPriority:prioRaw,prio:prioClass(prioRaw),prioMissing:!prioCell,
+      leadTime:reqLead[rid]!==undefined?reqLead[rid]:null,
+      y:d.getFullYear(),m:d.getMonth()+1,date:d});
+  });
+
+  const firstSeen={},lastSeen={};
+  quotes.forEach(q=>{
+    const f=firstSeen[q.company];
+    if(!f||q.date<f.date) firstSeen[q.company]={date:q.date,y:q.y,m:q.m,svc:q.svc,lab:q.lab};
+    if(!lastSeen[q.company]||q.date>lastSeen[q.company]) lastSeen[q.company]=q.date;
+  });
+
+  const mainIds=new Set(quotes.map(q=>q.requestId)),orphan=new Set();
+  details.forEach(d=>{ if(d.requestId&&!mainIds.has(d.requestId)) orphan.add(d.requestId); });
+  H.orphanDetail=[...orphan];
+
+  const revByComp={};
+  quotes.forEach(q=>revByComp[q.company]=(revByComp[q.company]||0)+q.revenue);
+  const companies=Object.keys(revByComp).sort((a,b)=>revByComp[b]-revByComp[a]);
+  const excludedFound=companies.filter(isExcludedCustomer);
+
+  return {quotes,details,companies,health:H,firstSeen,lastSeen,nameMap:NM,rawStats,excludedFound,
+    years:[...new Set(quotes.map(q=>q.y))].sort((a,b)=>b-a),
+    reqStatus:[...new Set(quotes.map(q=>q.status))].sort(),
+    sampStatus:[...new Set(details.map(d=>d.sampleStatus))].sort(),
+    labs:[...new Set(quotes.map(q=>q.lab))].sort()};
+}
+
+/* ========== HELPERS ========== */
+function passNonDate(x){
+  return (STATE.comp.size===0||STATE.comp.has(x.company))&&
+         (STATE.req.size===0||STATE.req.has(x.status))&&
+         (STATE.lab.size===0||STATE.lab.has(x.lab));
+}
+function slice(year,months){
+  const q=MODEL.quotes.filter(x=>(year==='ALL'||x.y===+year)&&(!months||months.size===0||months.has(x.m))&&passNonDate(x));
+  const ids=new Set(q.map(x=>x.requestId));
+  const d=MODEL.details.filter(x=>ids.has(x.requestId)&&(STATE.samp.size===0||STATE.samp.has(x.sampleStatus)));
+  return {q,d};
+}
+const sumRev=a=>a.reduce((s,x)=>s+x.revenue,0);
+const cntSample=a=>new Set(a.map(x=>x.sampleId)).size;
+const tKey=x=>[x.sampleId,x.sampleDesc,x.variantId,x.paramListId].join('|');
+const cntTest=a=>new Set(a.map(tKey)).size;
+const cntQuote=a=>new Set(a.map(x=>x.qano)).size;
+function percentile(arr,p){
+  if(!arr.length) return null;
+  const s=[...arr].sort((a,b)=>a-b);
+  const pos=(s.length-1)*p, base=Math.floor(pos), rest=pos-base;
+  return s[base+1]!==undefined ? s[base]+rest*(s[base+1]-s[base]) : s[base];
+}
+const leadArr=a=>a.filter(x=>x.leadTime!=null).map(x=>x.leadTime);
+const avgLead=a=>{const v=leadArr(a);return v.length?v.reduce((s,x)=>s+x,0)/v.length:null;};
+const medLead=a=>{const v=leadArr(a);return v.length?percentile(v,0.5):null;};
+const p90Lead=a=>{const v=leadArr(a);return v.length?percentile(v,0.9):null;};
+const ltColor=v=>v==null?'#94a3b8':v<=LT_GOOD?'#10b981':v<=LT_WARN?'#f59e0b':'#e11d48';
+function isNewCustomerYear(c,y){
+  if(STATE.exclInternal&&isExcludedCustomer(c)) return false;
+  return MODEL.firstSeen[c]&&MODEL.firstSeen[c].y===y;
+}
+function scopeText(){
+  const p=[`ปี ${STATE.year==='ALL'?'ทุกปี':STATE.year}`];
+  p.push(STATE.months.size?`เดือน ${[...STATE.months].sort((a,b)=>a-b).map(m=>MONTH_TH[m-1]).join(', ')}`:'ทุกเดือน');
+  if(STATE.lab.size) p.push(`Lab ${[...STATE.lab].join(', ')}`);
+  if(STATE.comp.size) p.push(`ลูกค้า ${STATE.comp.size} ราย`);
+  if(STATE.req.size) p.push(`สถานะ ${[...STATE.req].join(', ')}`);
+  return p.join(' · ');
+}
+
+/* ========== MULTI SELECT ========== */
+function multiSelect(mountId,label,options,set,onChange,w='w-44',searchable=false){
+  const el=$(mountId); if(!el) return;
+  el.innerHTML=`<label class="block text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-1">${label}</label>
+   <div class="relative ${w}">
+     <button type="button" class="ms-btn w-full text-left border border-slate-200 dark:border-slate-700 rounded-lg px-2.5 py-2 text-sm bg-white dark:bg-slate-800 flex items-center justify-between gap-2 hover:border-irpc-300">
+       <span class="ms-txt truncate">ทั้งหมด</span>
+       <svg class="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M19 9l-7 7-7-7"/></svg>
+     </button>
+     <div class="ms-panel hidden absolute z-30 mt-1 ${searchable?'w-[330px]':'w-full'} bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl p-1.5">
+       ${searchable?`<input class="ms-search w-full mb-1.5 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1.5 text-[12px] bg-white dark:bg-slate-900 outline-none" placeholder="ค้นหาชื่อบริษัท...">`:''}
+       <div class="flex items-center justify-between px-1 pb-1 border-b border-slate-100 dark:border-slate-700 mb-1">
+         <button type="button" class="ms-all text-[10.5px] text-irpc-600 dark:text-sky-400 hover:underline">เลือกทั้งหมด</button>
+         <button type="button" class="ms-none text-[10.5px] text-slate-400 hover:underline">ล้าง</button>
+       </div><div class="ms-list"></div>
+     </div></div>`;
+  const btn=el.querySelector('.ms-btn'),panel=el.querySelector('.ms-panel'),
+        txt=el.querySelector('.ms-txt'),list=el.querySelector('.ms-list'),search=el.querySelector('.ms-search');
+  const sync=()=>{
+    if(set.size===0) txt.textContent='ทั้งหมด';
+    else if(set.size===1){const o=options.find(x=>String(x.raw)===String([...set][0]));txt.textContent=o?o.t:'1 รายการ';}
+    else txt.textContent=`เลือก ${set.size} รายการ`;
+  };
+  const paint=(kw='')=>{
+    const k=kw.trim().toLowerCase();
+    const view=k?options.filter(o=>String(o.t).toLowerCase().includes(k)):options;
+    list.innerHTML=view.length?view.map(o=>`<label class="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-irpc-50 dark:hover:bg-slate-700 cursor-pointer text-[12px]">
+      <input type="checkbox" data-i="${options.indexOf(o)}" class="accent-irpc-600 w-3.5 h-3.5 shrink-0" ${set.has(o.raw)?'checked':''}>
+      <span class="truncate" title="${esc(o.t)}">${esc(o.t)}</span></label>`).join('')
+      :`<div class="px-2 py-3 text-center text-[11px] text-slate-400">ไม่พบรายการ</div>`;
+    list.querySelectorAll('input').forEach(inp=>{
+      inp.onchange=()=>{
+        const o=options[+inp.dataset.i];
+        inp.checked?set.add(o.raw):set.delete(o.raw); sync(); onChange();
+      };
+    });
+  };
+  paint(); sync();
+  btn.onclick=e=>{e.stopPropagation();
+    document.querySelectorAll('.ms-panel').forEach(p=>{if(p!==panel)p.classList.add('hidden')});
+    panel.classList.toggle('hidden'); if(search&&!panel.classList.contains('hidden')) search.focus();};
+  panel.onclick=e=>e.stopPropagation();
+  if(search) search.oninput=()=>paint(search.value);
+  el.querySelector('.ms-all').onclick=()=>{options.forEach(o=>set.add(o.raw));paint(search?search.value:'');sync();onChange();};
+  el.querySelector('.ms-none').onclick=()=>{set.clear();paint(search?search.value:'');sync();onChange();};
+}
+
+/* คลิกแบบ delegate: ชื่อบริษัท */
+document.addEventListener('click',e=>{
+  document.querySelectorAll('.ms-panel').forEach(p=>p.classList.add('hidden'));
+  const c=e.target.closest('[data-comp]');
+  if(c){ openCompModal(c.dataset.comp); return; }
+});
+
+/* ========== FILTERS ========== */
+function refreshFilters(){
+  const y=$('fYear'); if(!y) return;
+  y.innerHTML=`<option value="ALL">ทุกปี</option>`+MODEL.years.map(v=>`<option value="${v}">${v}</option>`).join('');
+  STATE.year=STATE.year&&(STATE.year==='ALL'||MODEL.years.includes(+STATE.year))?STATE.year:(MODEL.years[0]??'ALL');
+  y.value=STATE.year; y.onchange=()=>{STATE.year=y.value;render();};
+  multiSelect('msMonth','เดือน (Month)',MONTH_TH.map((t,i)=>({v:i+1,raw:i+1,t})),STATE.months,render,'w-36');
+  multiSelect('msComp','ลูกค้า (Company)',MODEL.companies.map(s=>({v:s,raw:s,t:s})),STATE.comp,render,'w-56',true);
+  multiSelect('msReq','Request Status',MODEL.reqStatus.map(s=>({v:s,raw:s,t:s})),STATE.req,render,'w-44');
+  multiSelect('msSamp','Sample Status',MODEL.sampStatus.map(s=>({v:s,raw:s,t:s})),STATE.samp,render,'w-40');
+  multiSelect('msLab','ส่วน (Lab)',MODEL.labs.map(s=>({v:s,raw:s,t:s})),STATE.lab,render,'w-32');
+  const nm=$('fNcMonth');
+  if(nm){ nm.innerHTML=`<option value="ALL">ทุกเดือน</option>`+MONTH_TH.map((t,i)=>`<option value="${i+1}">${t}</option>`).join(''); nm.value=STATE.ncMonth; }
+  const md=$('fNcMode'); if(md) md.value=STATE.ncMode;
+}
+function updateMergeBadge(){
+  const rawN=Object.keys(MODEL.rawStats).length,finalN=MODEL.companies.length,diff=rawN-finalN;
+  const fuzzyN=MODEL.nameMap.groups.filter(g=>g.type==='fuzzy').length;
+  if(!STATE.autoClean){
+    setTxt('mgBadge',`ปิดการรวมชื่อ · ${num(rawN)} ราย`);
+    setCls('mgBadge','text-[10.5px] px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium border border-slate-200 dark:border-slate-700');
+    return;
+  }
+  setTxt('mgBadge',`${num(rawN)} → ${num(finalN)} ราย (รวม ${num(diff)} ชื่อ${fuzzyN?` · คล้ายกัน ${num(fuzzyN)} กลุ่ม`:''})`);
+  setCls('mgBadge','text-[10.5px] px-2.5 py-0.5 rounded-full '+(fuzzyN
+    ?'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-900 font-medium'
+    :diff>0?'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900 font-medium'
+           :'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-medium'));
+}
+function chipRow(){
+  const cx=t=>`<span class="chip text-[10.5px] px-2.5 py-1 rounded-full">${esc(t)}</span>`;
+  const c=[cx(`ปี: ${STATE.year==='ALL'?'ทุกปี':STATE.year}`)];
+  if(STATE.months.size) c.push(cx(`เดือน: ${[...STATE.months].sort((a,b)=>a-b).map(m=>MONTH_TH[m-1]).join(', ')}`));
+  if(STATE.comp.size) c.push(cx(`ลูกค้า: ${STATE.comp.size===1?[...STATE.comp][0]:STATE.comp.size+' ราย'}`));
+  if(STATE.req.size) c.push(cx(`Request: ${[...STATE.req].join(', ')}`));
+  if(STATE.samp.size) c.push(cx(`Sample: ${[...STATE.samp].join(', ')}`));
+  if(STATE.lab.size) c.push(cx(`Lab: ${[...STATE.lab].join(', ')}`));
+  c.push(`<span class="text-[10.5px] px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 font-medium">ตัด Created / Cancelled / Reject ออกแล้ว</span>`);
+  if(MODEL.health&&MODEL.health.sampExcl) c.push(`<span class="text-[10.5px] px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 font-medium">ตัดตัวอย่างสถานะ Initial / Cancelled ออก ${num(MODEL.health.sampExcl)} รายการ</span>`);
+  if(STATE.autoClean){
+    const d=Object.keys(MODEL.rawStats).length-MODEL.companies.length;
+    if(d>0) c.push(`<span class="text-[10.5px] px-2.5 py-1 rounded-full bg-sky-50 text-sky-700 border border-sky-100 font-medium">รวมชื่อลูกค้าแล้ว ${num(d)} ชื่อ</span>`);
+  }
+  if(MODEL.health.future.length)
+    c.push(`<span class="text-[10.5px] px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-100 font-medium">ตัดวันที่อนาคต ${num(MODEL.health.future.length)} ใบ</span>`);
+  if(STATE.exclInternal&&MODEL.excludedFound.length)
+    c.push(`<span class="text-[10.5px] px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-100 font-medium">ไม่นับเป็นลูกค้าใหม่: ${esc(MODEL.excludedFound.join(', '))}</span>`);
+  setHtml('activeChips',c.join(''));
+  setHtml('printChips',`<div class="flex flex-wrap gap-1.5 mb-2">${c.join('')}</div>`);
+}
+function drawChart(id,cfg){
+  const el=$(id); if(!el) return null;
+  if(CHARTS[id]) CHARTS[id].destroy();
+  CHARTS[id]=new Chart(el,cfg);
+  return CHARTS[id];
+}
+
+/* ========== RENDER ========== */
+function render(){
+  try{ renderCore(); }
+  catch(err){ console.error(err); toast('เกิดข้อผิดพลาดขณะแสดงผล: '+err.message,5000); }
+}
+
+function renderCore(){
+  updateMergeBadge(); chipRow();
+  const cur=slice(STATE.year,STATE.months);
+  const rev=sumRev(cur.q);
+  const nQuote=cntQuote(cur.q),nSample=cntSample(cur.d),nTest=cntTest(cur.d);
+
+  /* ----- Summary ----- */
+  const doneCnt=cur.q.filter(q=>DONE_STATUS.includes(String(q.status).toLowerCase())).length;
+  const completionRate=cur.q.length?doneCnt/cur.q.length*100:0;
+  setTxt('kRev',num(rev));
+  setTxt('kRevSub',`${money(rev)} บาท`);
+  setTxt('kSample',num(nSample));
+  setTxt('kSampleSub','distinct sampleId');
+  setTxt('kQuote',num(nQuote));
+  setTxt('kQuoteSub',`ปิดงานแล้ว ${completionRate.toFixed(1)}% · เฉลี่ย ${num(nQuote?rev/nQuote:0)} บ./ใบ`);
+  setTxt('kTest',num(nTest));
+  setTxt('kTestSub','distinct test item');
+
+  const byCompAll={}; cur.q.forEach(q=>byCompAll[q.company]=(byCompAll[q.company]||0)+q.revenue);
+  const compRank=Object.entries(byCompAll).sort((a,b)=>b[1]-a[1]);
+  const conc3=rev?compRank.slice(0,3).reduce((s,x)=>s+x[1],0)/rev*100:0;
+  setTxt('uConc',conc3.toFixed(1)+'%');
+  setCls('uConc','num-md font-semibold '+(conc3>60?'text-rose-600':conc3>40?'text-amber-600':'text-emerald-600'));
+  setTxt('uConcSub',conc3>60?'กระจุกตัวสูง':conc3>40?'กระจุกตัวปานกลาง':'กระจายตัวดี');
+
+  let refY=null,refM=null;
+  cur.q.forEach(q=>{if(refY===null||q.y>refY||(q.y===refY&&q.m>refM)){refY=q.y;refM=q.m;}});
+  if(refY===null){const t=new Date();refY=t.getFullYear();refM=t.getMonth()+1;}
+  const curY=STATE.year==='ALL'?refY:+STATE.year;
+
+  const revOf=(y,m)=>sumRev(MODEL.quotes.filter(x=>x.y===y&&x.m===m&&passNonDate(x)));
+  const revYear=y=>sumRev(MODEL.quotes.filter(x=>x.y===y&&passNonDate(x)));
+  const revYTD=(y,m)=>sumRev(MODEL.quotes.filter(x=>x.y===y&&x.m<=m&&passNonDate(x)));
+  const mNow=revOf(refY,refM);
+  const pm=refM===1?{y:refY-1,m:12}:{y:refY,m:refM-1};
+  const mPrev=revOf(pm.y,pm.m), yNow=revYear(refY);
+  const ytdNow=revYTD(refY,refM), ytdPrev=revYTD(refY-1,refM);
+
+  const setDelta=(p1,a1,d1,now,prev,l1,l2)=>{
+    const pct=prev>0?(now-prev)/prev*100:(now>0?100:0), up=pct>=0;
+    setTxt(p1,prev>0?(up?'+':'')+pct.toFixed(1)+'%':(now>0?'ใหม่':'–'));
+    setCls(p1,'num-lg font-semibold '+(up?'text-emerald-600 dark:text-emerald-400':'text-rose-600 dark:text-rose-400'));
+    setTxt(a1,up?'▲':'▼'); setCls(a1,'text-xs '+(up?'text-emerald-500':'text-rose-500'));
+    setHtml(d1,`${l1} <b>${num(now)}</b> · ${l2} ${num(prev)}`);
+  };
+  setDelta('momPct','momArrow','momDetail',mNow,mPrev,`${MONTH_TH[refM-1]}${String(refY).slice(2)}`,`${MONTH_TH[pm.m-1]}${String(pm.y).slice(2)}`);
+  setDelta('yoyPct','yoyArrow','yoyDetail',ytdNow,ytdPrev,`YTD${String(refY).slice(2)}`,`YTD${String(refY-1).slice(2)}`);
+  (function(){
+    const qc=(y)=>{const a=MODEL.quotes.filter(x=>x.y===y&&x.m<=refM&&passNonDate(x));
+      return {n:new Set(a.map(x=>x.qano)).size,mo:new Set(a.map(x=>x.m)).size};};
+    const a=qc(refY),b=qc(refY-1), w=[];
+    if(ytdNow>0&&ytdPrev>0&&ytdPrev<ytdNow*0.1) w.push(`ปี ${refY-1} มีเพียง ${num(b.n)} ใบ / ${b.mo} เดือน เทียบปี ${refY} ${num(a.n)} ใบ / ${a.mo} เดือน — ข้อมูลปีก่อนอาจไม่ครบ หรือชื่อ Lab/เลขที่ใบเสนอราคาของปีก่อนต่างจากปีนี้ (ดู Health Check)`);
+    else if(ytdNow>0&&ytdPrev===0) w.push(`ไม่พบข้อมูลปี ${refY-1} ในตัวกรองนี้ (ตรวจสอบว่าชื่อ Lab ของปีก่อนตรงกันหรือไม่)`);
+    setTxt('yoyWarn',w.join(' '));
+  })();
+
+  /* ใช้เกณฑ์ KPI ใหม่ (L1 < 17M, L2 >= 17M, L3 >= 18M, L4 >= 19M, L5 >= 20M) */
+  const paintKPI=(c1,b1,v1,bar1,s1,val,isYear)=>{
+    const lv=isYear?kpiLevelYear(val):kpiLevelMonth(val);
+    const s=LEVEL_STYLE[lv];
+    setTxt(b1,s.label);
+    setCls(b1,`text-[9.5px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shadow-xs ${s.bg} ${s.text}`);
+    setTxt(v1,num(val));
+    const targetL3 = isYear ? KPI_Y.L3 : KPI_M.L3;
+    setStyle(bar1,'width',Math.min(100,val/targetL3*100).toFixed(1)+'%');
+    setStyle(bar1,'background',s.bar);
+    const gap=targetL3-val;
+    setHtml(s1,gap>0?`เป้า L3 ${num(targetL3)} · <b class="text-rose-500">ขาด ${num(gap)}</b>`
+                    :`เป้า L3 ${num(targetL3)} · <b class="text-emerald-600">เกิน ${num(-gap)}</b>`);
+    setStyle(c1,'borderTop','3px solid '+s.bar);
+  };
+  paintKPI('kpiMonthCard','kpiMonthBadge','kpiMonthVal','kpiMonthBar','kpiMonthSub',mNow,false);
+  paintKPI('kpiYearCard','kpiYearBadge','kpiYearVal','kpiYearBar','kpiYearSub',yNow,true);
+
+  /* ----- Retention / Churn ----- */
+  const prevComps=new Set(MODEL.quotes.filter(x=>x.y===curY-1&&passNonDate(x)).map(q=>q.company));
+  const currComps=new Set(MODEL.quotes.filter(x=>x.y===curY&&passNonDate(x)).map(q=>q.company));
+  let retained=0,churn=0;
+  prevComps.forEach(c=>{ currComps.has(c)?retained++:churn++; });
+  const retentionRate=prevComps.size?retained/prevComps.size*100:0;
+  const churnRate=prevComps.size?churn/prevComps.size*100:0;
+  setTxt('kRetention',prevComps.size?`${retentionRate.toFixed(1)}% / ${churnRate.toFixed(1)}%`:'—');
+  setTxt('kRetentionSub',prevComps.size?`ซื้อซ้ำ ${retained} · หายไป ${churn} (ฐาน ${prevComps.size} ราย ปี ${curY-1})`:`ไม่มีข้อมูลปี ${curY-1}`);
+
+  /* ----- At-risk ----- */
+  const atRiskList=[];
+  prevComps.forEach(c=>{
+    if(currComps.has(c)) return;
+    if(STATE.exclInternal&&isExcludedCustomer(c)) return;
+    const pq=MODEL.quotes.filter(q=>q.company===c&&q.y===curY-1&&passNonDate(q));
+    atRiskList.push({company:c,rev:sumRev(pq),cnt:cntQuote(pq),last:MODEL.lastSeen[c]});
+  });
+  atRiskList.sort((a,b)=>b.rev-a.rev);
+  const atRiskRev=atRiskList.reduce((s,x)=>s+x.rev,0);
+  setTxt('kRisk',num(atRiskList.length)+' ราย');
+  setTxt('kRiskSub',atRiskList.length?`เคยสร้างรายได้ ${num(atRiskRev)} บ. (ปี ${curY-1})`:'ไม่มีลูกค้าหลุดหาย');
+  setTxt('arCount',atRiskList.length?`${num(atRiskList.length)} ราย · รายได้ปีก่อนรวม ${num(atRiskRev)} บาท`:'0 ราย');
+  const arMax=Math.max(1,...atRiskList.map(x=>x.rev));
+  const _now=new Date();
+  setHtml('tbAtRisk',atRiskList.length?atRiskList.map((x,i)=>{
+    const mo=x.last?Math.max(0,Math.floor((_now-x.last)/(1000*60*60*24*30.4))):null;
+    const cls=mo===null?'idle-lo':mo>=9?'idle-hi':mo>=4?'idle-md':'idle-lo';
+    return `
+    <tr class="data-row border-b border-slate-100 dark:border-slate-800 hover:bg-rose-50/60 dark:hover:bg-slate-800/50">
+      <td class="pl-3"><span class="rank ${i<5?'top':''}">${i+1}</span></td>
+      <td class="nm font-medium">${compLink(x.company)}</td>
+      <td class="text-right"><div class="font-semibold">${money(x.rev)}</div>
+        <div class="mbar bg-rose-400" style="width:${Math.max(4,x.rev/arMax*100)}%"></div></td>
+      <td class="text-right">${num(x.cnt)}</td>
+      <td class="text-right text-slate-500">${thDate(x.last)}</td>
+      <td class="pr-3 text-center">${mo===null?'—':`<span class="idle ${cls}">${mo} เดือน</span>`}</td>
+    </tr>`;}).join(''):`<tr><td colspan="6" class="py-6 text-center text-slate-400">ไม่มีลูกค้าปี ${curY-1} ที่หลุดหายในปี ${curY}</td></tr>`);
+  LAST_AT_RISK=atRiskList;
+
+  /* ----- Priority ----- */
+  const PRIO_ORDER=['Normal','Urgent','Express'];
+  const prioBucket={Normal:[],Urgent:[],Express:[]};
+  cur.q.forEach(q=>{ (prioBucket[q.prio]||prioBucket.Normal).push(q); });
+  const qTotal=cur.q.length;
+  const pStat={};
+  PRIO_ORDER.forEach(k=>{
+    const arr=prioBucket[k], r=sumRev(arr);
+    pStat[k]={cnt:arr.length,pctCnt:qTotal?arr.length/qTotal*100:0,rev:r,pctRev:rev?r/rev*100:0,lt:avgLead(arr)};
+  });
+  setHtml('kExpress',
+    `<span class="text-amber-600 dark:text-amber-400">${num(pStat.Urgent.cnt)}</span>`+
+    `<span class="text-[10px] text-amber-600/80"> (${pStat.Urgent.pctCnt.toFixed(1)}%)</span>`+
+    `<span class="text-slate-300 dark:text-slate-600 mx-1">/</span>`+
+    `<span class="text-rose-600 dark:text-rose-400">${num(pStat.Express.cnt)}</span>`+
+    `<span class="text-[10px] text-rose-600/80"> (${pStat.Express.pctCnt.toFixed(1)}%)</span>`);
+  setTxt('kExpressSub',`Normal ${num(pStat.Normal.cnt)} ใบ (${pStat.Normal.pctCnt.toFixed(1)}%) · รวม ${num(qTotal)} ใบ`);
+
+  const PRIO_STYLE={
+    Normal :{dot:'#0072BC',cls:'text-irpc-700 dark:text-sky-400',th:'ปกติ'},
+    Urgent :{dot:'#f59e0b',cls:'text-amber-600 dark:text-amber-400',th:'ด่วน'},
+    Express:{dot:'#e11d48',cls:'text-rose-600 dark:text-rose-400',th:'ด่วนที่สุด'}
+  };
+  setHtml('tbPriority',PRIO_ORDER.map(k=>{
+    const s=PRIO_STYLE[k],v=pStat[k];
+    return `<tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+      <td class="py-2.5 pl-3 font-medium ${s.cls}"><span style="color:${s.dot}">■</span> ${k} <span class="text-slate-400 text-[11px]">(${s.th})</span></td>
+      <td class="py-2.5 text-right font-semibold">${num(v.cnt)}</td>
+      <td class="py-2.5 text-right">${v.pctCnt.toFixed(1)}%</td>
+      <td class="py-2.5 text-right font-semibold text-irpc-700 dark:text-sky-400">${money(v.rev)}</td>
+      <td class="py-2.5 text-right">${v.pctRev.toFixed(1)}%</td>
+      <td class="py-2.5 pr-3 text-right font-medium" style="color:${ltColor(v.lt)}">${day1(v.lt)}</td>
+    </tr>`;
+  }).join('')+`<tr class="border-t-2 border-slate-200 dark:border-slate-700 font-bold bg-slate-50/50 dark:bg-slate-800/50">
+      <td class="py-2.5 pl-3">รวมทั้งหมด</td>
+      <td class="py-2.5 text-right">${num(qTotal)}</td>
+      <td class="py-2.5 text-right">100.0%</td>
+      <td class="py-2.5 text-right text-irpc-700 dark:text-sky-400">${money(rev)}</td>
+      <td class="py-2.5 text-right">100.0%</td>
+      <td class="py-2.5 pr-3 text-right" style="color:${ltColor(avgLead(cur.q))}">${day1(avgLead(cur.q))}</td>
+    </tr>`);
+  LAST_PRIO=pStat;
+
+  /* ----- New customers ----- */
+  const newByMonth=Array(12).fill(null).map(()=>[]);
+  const excludedInYear=[];
+  Object.entries(MODEL.firstSeen).forEach(([comp,f])=>{
+    if(f.y!==curY) return;
+    if(STATE.comp.size&&!STATE.comp.has(comp)) return;
+    if(STATE.lab.size&&!STATE.lab.has(f.lab)) return;
+    if(STATE.exclInternal&&isExcludedCustomer(comp)){ excludedInYear.push({comp,m:f.m}); return; }
+    newByMonth[f.m-1].push(comp);
+  });
+  const newCntM=newByMonth.map(a=>a.length);
+  const newCumM=newCntM.map((_,i)=>newCntM.slice(0,i+1).reduce((a,b)=>a+b,0));
+
+  const newRevM=Array(12).fill(0), oldRevM=Array(12).fill(0);
+  const newRevNames=Array(12).fill(null).map(()=>({}));
+  MODEL.quotes.filter(x=>x.y===curY&&passNonDate(x)).forEach(q=>{
+    const f=MODEL.firstSeen[q.company];
+    const isNewThisYear=f&&f.y===curY&&!(STATE.exclInternal&&isExcludedCustomer(q.company));
+    const countAsNew=STATE.ncMode==='cohort'?(isNewThisYear&&f.m===q.m):isNewThisYear;
+    if(countAsNew){
+      newRevM[q.m-1]+=q.revenue;
+      newRevNames[q.m-1][q.company]=(newRevNames[q.m-1][q.company]||0)+q.revenue;
+    } else oldRevM[q.m-1]+=q.revenue;
+  });
+  const newRevYTD=newRevM.reduce((a,b)=>a+b,0), oldRevYTD=oldRevM.reduce((a,b)=>a+b,0), nrTotal=newRevYTD+oldRevYTD;
+
+  const selMonths=STATE.months.size?[...STATE.months].sort((a,b)=>a-b):null;
+  let ncVal,ncLabel,ncSub;
+  if(selMonths){
+    const names=[]; selMonths.forEach(m=>names.push(...newByMonth[m-1]));
+    ncVal=names.length;
+    ncLabel=`ลูกค้าใหม่ · ${selMonths.map(m=>MONTH_TH[m-1]).join(', ')}`;
+    ncSub=names.length?(names.length<=2?names.join(' · '):`${names[0]} และอีก ${names.length-1} ราย`):'ไม่มีลูกค้าใหม่ในเดือนที่เลือก';
+  }else{
+    ncVal=newCumM[11]; ncLabel=`ลูกค้าใหม่ · สะสมทั้งปี ${curY}`;
+    const lw=newCntM.reduce((a,v,i)=>v>0?i:a,-1);
+    ncSub=ncVal?`ล่าสุด ${lw>=0?MONTH_TH[lw]:'-'} เพิ่ม ${num(newCntM[lw]||0)} ราย`:'ยังไม่มีลูกค้าใหม่ในปีนี้';
+  }
+  setTxt('lblNewCust',ncLabel); setTxt('kNewCust',num(ncVal)+' ราย'); setTxt('kNewCustSub',ncSub);
+
+  let nrVal,nrLabel,nrSub;
+  if(selMonths){
+    nrVal=selMonths.reduce((s,m)=>s+newRevM[m-1],0);
+    nrLabel=`รายได้ลูกค้าใหม่ · ${selMonths.map(m=>MONTH_TH[m-1]).join(', ')}`;
+    const base=selMonths.reduce((s,m)=>s+newRevM[m-1]+oldRevM[m-1],0);
+    nrSub=`${base?(nrVal/base*100).toFixed(1):0}% ของเดือนที่เลือก · สะสม ${num(newRevYTD)}`;
+  }else{
+    const lm=newRevM.reduce((a,v,i)=>v>0?i:a,-1);
+    nrVal=lm>=0?newRevM[lm]:0;
+    nrLabel=`รายได้ลูกค้าใหม่ · ${lm>=0?MONTH_TH[lm]:'-'} ${curY}`;
+    const base=lm>=0?newRevM[lm]+oldRevM[lm]:0;
+    nrSub=`${base?(nrVal/base*100).toFixed(1):0}% ของเดือนนั้น · สะสม ${num(newRevYTD)}`;
+  }
+  setTxt('lblNewRev',nrLabel); setTxt('kNewRev',num(nrVal)); setTxt('kNewRevSub',nrSub);
+
+  drawChart('chNewCust',{
+    data:{labels:MONTH_TH,datasets:[
+      {type:'bar',label:'ลูกค้าใหม่ (ราย)',data:newCntM,backgroundColor:'#22c55e',borderRadius:6,maxBarThickness:28,order:2,yAxisID:'y'},
+      {type:'line',label:'สะสม (ราย)',data:newCumM,borderColor:'#0072BC',backgroundColor:'#0072BC',borderWidth:2.5,pointRadius:3,tension:.3,order:1,yAxisID:'y1'}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:7,padding:10,font:{size:11}}},
+        tooltip:{callbacks:{label:c=>c.dataset.label+': '+num(c.parsed.y)+' ราย',
+          afterBody:c=>{const n=newByMonth[c[0].dataIndex];
+            return n.length?['','ลูกค้าใหม่เดือนนี้:'].concat(n.slice(0,12).map((x,k)=>`${k+1}. ${x.length>40?x.slice(0,38)+'…':x}`)):['','— ไม่มีลูกค้าใหม่ —'];}}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:10}}},
+        y:{beginAtZero:true,position:'left',grid:{color:'rgba(148,163,184,.15)'},ticks:{precision:0,font:{size:9.5}}},
+        y1:{beginAtZero:true,position:'right',grid:{display:false},ticks:{precision:0,font:{size:9.5}}}}}
+  });
+  const maxNewM=Math.max(...newCntM);
+  setHtml('ncNote',`ปี ${curY} มีลูกค้าใหม่รวม <b class="text-emerald-600">${num(newCumM[11])}</b> ราย`+
+    (maxNewM>0?` · เดือนที่ได้มากที่สุดคือ <b>${MONTH_TH[newCntM.indexOf(maxNewM)]}</b> (${num(maxNewM)} ราย)`:''));
+
+  drawChart('chNewRev',{type:'bar',
+    data:{labels:MONTH_TH,datasets:[
+      {label:'ลูกค้าเดิม',data:oldRevM,backgroundColor:'#0072BC',borderRadius:5,maxBarThickness:26},
+      {label:'ลูกค้าใหม่ (ปีแรก)',data:newRevM,backgroundColor:'#22c55e',borderRadius:5,maxBarThickness:26}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:7,padding:10,font:{size:11}}},
+        tooltip:{callbacks:{
+          label:c=>c.parsed.y?`${c.dataset.label}: ${money(c.parsed.y)} บาท`:null,
+          afterBody:c=>{
+            const i=c[0].dataIndex,t=newRevM[i]+oldRevM[i];
+            const names=Object.entries(newRevNames[i]).sort((a,b)=>b[1]-a[1]);
+            const out=t?['',`รวม ${money(t)} บาท · ลูกค้าใหม่ ${(newRevM[i]/t*100).toFixed(1)}%`]:[];
+            if(names.length) out.push('','ลูกค้าใหม่เดือนนี้:',...names.map(([n,v],k)=>`${k+1}. ${n.length>32?n.slice(0,30)+'…':n} — ${num(v)} บ.`));
+            return out;
+          }}}},
+      scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},
+        y:{stacked:true,beginAtZero:true,grid:{color:'rgba(148,163,184,.15)'},ticks:{callback:v=>num(v),font:{size:9.5},maxTicksLimit:6}}}}
+  });
+  setHtml('nrNote',STATE.ncMode==='cohort'
+    ?`แท่งเขียว = รายได้ที่เกิด<b>ในเดือนที่ได้ลูกค้ามา</b>เท่านั้น · รวมทั้งปี <b class="text-emerald-600">${num(newRevYTD)}</b> บาท (${nrTotal?(newRevYTD/nrTotal*100).toFixed(1):0}%)`
+    :`แท่งเขียว = รายได้ทุกเดือนของลูกค้าที่เข้ามาปีนี้ · รวมทั้งปี <b class="text-emerald-600">${num(newRevYTD)}</b> บาท (${nrTotal?(newRevYTD/nrTotal*100).toFixed(1):0}%)`);
+
+  const ncList=[];
+  Object.entries(MODEL.firstSeen).forEach(([comp,f])=>{
+    if(f.y!==curY) return;
+    if(STATE.comp.size&&!STATE.comp.has(comp)) return;
+    if(STATE.lab.size&&!STATE.lab.has(f.lab)) return;
+    if(STATE.exclInternal&&isExcludedCustomer(comp)) return;
+    if(STATE.ncMonth!=='ALL'&&f.m!==+STATE.ncMonth) return;
+    const qs=MODEL.quotes.filter(q=>q.company===comp&&q.y===curY&&passNonDate(q));
+    const ids=new Set(qs.map(q=>q.requestId));
+    const ds=MODEL.details.filter(d=>ids.has(d.requestId));
+    const alias=[...new Set(qs.map(q=>q.companyRaw))].filter(x=>x!==comp);
+    ncList.push({comp,m:f.m,svc:f.svc,q:cntQuote(qs),s:cntSample(ds),rev:sumRev(qs),alias});
+  });
+  ncList.sort((a,b)=>a.m-b.m||b.rev-a.rev);
+  setTxt('ncCount',`${num(ncList.length)} ราย · รายได้รวม ${num(ncList.reduce((s,x)=>s+x.rev,0))} บาท`);
+  const ncMax=Math.max(1,...ncList.map(x=>x.rev));
+  let ncHtml='',ncPrevM=null;
+  ncList.forEach((x,i)=>{
+    if(STATE.ncMonth==='ALL'&&x.m!==ncPrevM){
+      const g=ncList.filter(y=>y.m===x.m);
+      ncHtml+=`<tr class="mgrp"><td colspan="7" class="pl-3">🗓 ${MONTH_TH[x.m-1]} ${curY} · ${num(g.length)} ราย · รายได้ ${num(g.reduce((t,y)=>t+y.rev,0))} บาท</td></tr>`;
+      ncPrevM=x.m;
+    }
+    ncHtml+=`
+    <tr class="data-row border-b border-slate-100 dark:border-slate-800 hover:bg-emerald-50/60 dark:hover:bg-slate-800/50">
+      <td class="pl-3"><span class="rank">${i+1}</span></td>
+      <td class="nm font-medium">${compLink(x.comp)}
+        ${x.alias.length?`<div class="sub-xs mt-0.5">↳ รวมชื่อ: ${esc(x.alias.join(' | '))}</div>`:''}</td>
+      <td><span class="text-[11px] px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 font-medium whitespace-nowrap">${MONTH_TH[x.m-1]} ${curY}</span></td>
+      <td class="nm text-slate-600 dark:text-slate-300">${esc(x.svc)}</td>
+      <td class="text-right">${num(x.q)}</td>
+      <td class="text-right">${num(x.s)}</td>
+      <td class="pr-3 text-right"><div class="font-semibold text-emerald-700 dark:text-emerald-400">${money(x.rev)}</div>
+        <div class="mbar bg-emerald-400" style="width:${Math.max(4,x.rev/ncMax*100)}%"></div></td>
+    </tr>`;
+  });
+  setHtml('tbNewCust',ncList.length?ncHtml:`<tr><td colspan="7" class="py-6 text-center text-slate-400">ไม่มีลูกค้าใหม่ตามเงื่อนไขที่เลือก</td></tr>`);
+  setHtml('ncExclNote',excludedInYear.length
+    ?`⛔ ไม่นับเป็นลูกค้าใหม่ตามรายชื่อยกเว้น: ${excludedInYear.map(x=>`<b>${esc(x.comp)}</b> (${MONTH_TH[x.m-1]})`).join(' · ')}`
+    :`นิยามลูกค้าใหม่: ลูกค้าที่ไม่เคยใช้บริการมาก่อนเลย · คอลัมน์รายได้ = ยอดทั้งปีแรก`);
+  LAST_NC={ncList,newByMonth,newCntM,newCumM,newRevM,oldRevM,curY,excludedInYear};
+
+  /* ----- Lead time ----- */
+  const ltAll=avgLead(cur.q), ltMed=medLead(cur.q), ltP90=p90Lead(cur.q);
+  setTxt('kLead',ltAll==null?'—':`${day1(ltAll)} / ${day1(ltP90)} วัน`);
+  setStyle('kLead','color',ltColor(ltAll));
+  setTxt('kLeadSub',ltAll==null?'ไม่มีข้อมูล completeDate':`Median ${day1(ltMed)} · จาก ${num(leadArr(cur.q).length)} ใบงาน`);
+
+  const ltMonth=Array(12).fill(null).map((_,i)=>{
+    const l=MODEL.quotes.filter(x=>x.y===curY&&x.m===i+1&&passNonDate(x)&&x.leadTime!=null);
+    return l.length?l.reduce((s,x)=>s+x.leadTime,0)/l.length:null;});
+  drawChart('chLeadMonth',{
+    data:{labels:MONTH_TH,datasets:[
+      {type:'bar',label:'Lead Time เฉลี่ย (วัน)',data:ltMonth,backgroundColor:ltMonth.map(ltColor),borderRadius:5,maxBarThickness:28,order:2},
+      {type:'line',label:`เกณฑ์ดี (${LT_GOOD} วัน)`,data:Array(12).fill(LT_GOOD),borderColor:'#10b981',borderDash:[6,4],borderWidth:1.8,pointRadius:0,order:1},
+      {type:'line',label:`เฝ้าระวัง (${LT_WARN} วัน)`,data:Array(12).fill(LT_WARN),borderColor:'#f59e0b',borderDash:[3,3],borderWidth:1.6,pointRadius:0,order:0}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:7,padding:10,font:{size:11}}},
+        tooltip:{callbacks:{label:c=>c.parsed.y==null?'ไม่มีข้อมูล':`${c.dataset.label}: ${day1(c.parsed.y)} วัน`}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:10}}},
+        y:{beginAtZero:true,grid:{color:'rgba(148,163,184,.15)'},ticks:{font:{size:9.5}}}}}
+  });
+  const worstM=ltMonth.reduce((a,v,i)=>(v!=null&&(a<0||v>ltMonth[a]))?i:a,-1);
+  setHtml('ltNote',ltMonth.some(v=>v!=null)
+    ?`ค่าเฉลี่ย <b style="color:${ltColor(ltAll)}">${day1(ltAll)} วัน</b> · Median ${day1(ltMed)} · P90 ${day1(ltP90)} วัน`+
+     (worstM>=0?` · ช้าสุด <b>${MONTH_TH[worstM]}</b> (${day1(ltMonth[worstM])} วัน)`:'')
+    :`ไม่พบคอลัมน์ completeDate — เพิ่มใน Sheet Detail เพื่อใช้งาน Lead Time`);
+
+  const ltKey=STATE.ltDim==='loc'?'loc':STATE.ltDim==='svc'?'svc':'lab';
+  const ltGrp={}; cur.d.filter(d=>d.leadTime!=null).forEach(d=>{(ltGrp[d[ltKey]]=ltGrp[d[ltKey]]||[]).push(d.leadTime);});
+  const ltArr=Object.entries(ltGrp).map(([k,v])=>[k,v.reduce((a,b)=>a+b,0)/v.length,v.length,percentile(v,0.9)]).sort((a,b)=>b[1]-a[1]).slice(0,12);
+  drawChart('chLeadDim',{type:'bar',
+    data:{labels:ltArr.map(x=>x[0].length>28?x[0].slice(0,26)+'…':x[0]),
+      datasets:[{data:ltArr.map(x=>+x[1].toFixed(2)),backgroundColor:ltArr.map(x=>ltColor(x[1])),borderRadius:5,maxBarThickness:18}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:c=>ltArr[c[0].dataIndex][0],
+        label:c=>`เฉลี่ย ${day1(c.parsed.x)} วัน · P90 ${day1(ltArr[c.dataIndex][3])} · ${num(ltArr[c.dataIndex][2])} รายการ`}}},
+      scales:{x:{beginAtZero:true,grid:{color:'rgba(148,163,184,.15)'},ticks:{font:{size:9.5}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
+  });
+
+  /* ----- Monthly trend + forecast ----- */
+  const sNow=[],sPrev=[];
+  for(let m=1;m<=12;m++){sNow.push(revOf(curY,m));sPrev.push(revOf(curY-1,m));}
+  let lastM=0; for(let m=1;m<=12;m++) if(sNow[m-1]>0) lastM=m;
+  if(!lastM) lastM=(curY===refY?refM:12);
+  const ytd=sNow.slice(0,lastM).reduce((a,b)=>a+b,0), avg=lastM?ytd/lastM:0, left=12-lastM, proj=ytd+avg*left;
+  FC={curY,lastM,ytd,avg,left,proj};
+  drawChart('chTrend',{
+    data:{labels:MONTH_TH,datasets:[
+      {type:'bar',label:`ปี ${curY} (จริง)`,data:sNow.map((v,i)=>i+1<=lastM?v:null),
+       backgroundColor:sNow.map(v=>LEVEL_STYLE[kpiLevelMonth(v)].bar),borderRadius:6,maxBarThickness:34,order:3},
+      {type:'bar',label:'คาดการณ์',data:sNow.map((v,i)=>i+1>lastM?avg:null),
+       backgroundColor:'rgba(139,92,246,.32)',borderColor:'#8b5cf6',borderWidth:1.5,borderRadius:6,maxBarThickness:34,order:2},
+      {type:'line',label:`ปี ${curY-1}`,data:sPrev,borderColor:'#94a3b8',borderWidth:2,borderDash:[3,3],pointRadius:2.5,tension:.35,order:1},
+      {type:'line',label:'เป้า KPI L3',data:Array(12).fill(KPI_M.L3),borderColor:'#10b981',borderWidth:2,borderDash:[7,5],pointRadius:0,order:0}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:7,padding:10,font:{size:11}}},
+        tooltip:{callbacks:{label:c=>c.parsed.y==null?'':`${c.dataset.label}: ${money(c.parsed.y)} บาท`}}},
+      scales:{y:{beginAtZero:true,grid:{color:'rgba(148,163,184,.15)'},ticks:{callback:v=>num(v),font:{size:9.5},maxTicksLimit:7}},
+        x:{grid:{display:false},ticks:{font:{size:10}}}}}
+  });
+
+  /* ----- Daily trend ----- */
+  const dateMap={};
+  cur.q.forEach(q=>{ const k=ymd(q.date); dateMap[k]=(dateMap[k]||0)+q.revenue; });
+  let timeline=[];
+  if(STATE.year!=='ALL'){
+    const y=+STATE.year;
+    let monthsToUse=STATE.months.size?[...STATE.months]:Array.from({length:12},(_,i)=>i+1);
+    if(!STATE.months.size&&y===new Date().getFullYear()) monthsToUse=monthsToUse.filter(m=>m<=new Date().getMonth()+1);
+    monthsToUse.sort((a,b)=>a-b).forEach(m=>{
+      const dim=new Date(y,m,0).getDate();
+      for(let d=1;d<=dim;d++){
+        const dt=new Date(y,m-1,d);
+        timeline.push({ds:ymd(dt),label:`${d} ${MONTH_TH[m-1]}`,wk:dt.getDay()===0||dt.getDay()===6});
+      }
+    });
+  }else{
+    timeline=Object.keys(dateMap).sort().map(ds=>{
+      const p=ds.split('-'); return {ds,label:`${+p[2]} ${MONTH_TH[+p[1]-1]} ${p[0]}`,wk:false};
+    });
+  }
+  const dailyData=timeline.map(t=>dateMap[t.ds]||0);
+  const ma7=dailyData.map((_,i)=>{const s=dailyData.slice(Math.max(0,i-6),i+1);return s.reduce((a,b)=>a+b,0)/s.length;});
+  let cum=0; const dailyCum=dailyData.map(v=>(cum+=v));
+  const maxDay=dailyData.reduce((mi,v,i,a)=>v>a[mi]?i:mi,0);
+  const activeDays=dailyData.filter(v=>v>0).length;
+  drawChart('chDailyTrend',{
+    data:{labels:timeline.map(t=>t.label),datasets:[
+      {type:'line',label:'รายได้รายวัน',data:dailyData,borderColor:'#0072BC',backgroundColor:'rgba(0,114,188,.08)',borderWidth:1.8,fill:true,tension:.2,
+       pointRadius:timeline.length>70?0:2.5,pointBackgroundColor:timeline.map(t=>t.wk?'#94a3b8':'#0072BC'),yAxisID:'y',order:2},
+      {type:'line',label:'ค่าเฉลี่ย 7 วัน',data:ma7,borderColor:'#f97316',borderWidth:2.2,pointRadius:0,tension:.3,yAxisID:'y',order:1},
+      {type:'line',label:'ยอดสะสม',data:dailyCum,borderColor:'#8b5cf6',borderWidth:2,borderDash:[4,4],pointRadius:0,tension:.2,yAxisID:'y1',order:0}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:7,padding:10,font:{size:11}}},
+        tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${money(c.parsed.y)} บาท`,
+          afterTitle:c=>timeline[c[0].dataIndex]&&timeline[c[0].dataIndex].wk?'(วันหยุดสุดสัปดาห์)':''}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:9.5},maxTicksLimit:16,autoSkip:true}},
+        y:{beginAtZero:true,position:'left',grid:{color:'rgba(148,163,184,.15)'},ticks:{callback:v=>num(v),font:{size:9.5},maxTicksLimit:6}},
+        y1:{beginAtZero:true,position:'right',grid:{display:false},ticks:{callback:v=>num(v),font:{size:9.5},maxTicksLimit:6}}}}
+  });
+  setHtml('dailyNote',timeline.length
+    ?`ยอดรวม <b>${money(rev)} บาท</b> · มีรายได้ ${num(activeDays)} จาก ${num(timeline.length)} วัน · เฉลี่ยต่อวันที่มีงาน ${num(activeDays?rev/activeDays:0)} บาท · สูงสุด <b>${timeline[maxDay].label}</b> (${num(dailyData[maxDay])} บาท) · จุดสีเทา = เสาร์–อาทิตย์`
+    :'ไม่มีข้อมูลในช่วงที่เลือก');
+
+  /* ----- Quarter ----- */
+  const qRows=[1,2,3,4].map(qq=>{
+    const ms=[qq*3-2,qq*3-1,qq*3];
+    const q1=MODEL.quotes.filter(x=>x.y===curY&&ms.includes(x.m)&&passNonDate(x));
+    const ids=new Set(q1.map(x=>x.requestId));
+    const d1=MODEL.details.filter(x=>ids.has(x.requestId)&&(STATE.samp.size===0||STATE.samp.has(x.sampleStatus)));
+    const r=sumRev(q1);
+    return {q:'Q'+qq,rev:r,nc:ms.reduce((s,m)=>s+newCntM[m-1],0),samp:cntSample(d1),pct:r/KPI_Q_L3*100,lv:kpiLevelMonth(r/3)};
+  });
+  setHtml('tbQuarter',qRows.map(r=>{
+    const s=LEVEL_STYLE[r.lv];
+    return `<tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-irpc-50/40 dark:hover:bg-slate-800/50">
+      <td class="py-2.5 pl-3 font-medium text-slate-600 dark:text-slate-300">${r.q} / ${curY}</td>
+      <td class="py-2.5 text-right font-semibold text-irpc-700 dark:text-sky-400">${num(r.rev)}</td>
+      <td class="py-2.5 text-right ${r.nc?'text-emerald-600 dark:text-emerald-400 font-medium':'text-slate-400'}">${num(r.nc)}</td>
+      <td class="py-2.5 text-right">${num(r.samp)}</td>
+      <td class="py-2.5 text-right ${r.pct>=100?'text-emerald-600 dark:text-emerald-400':'text-slate-500'}">${r.pct.toFixed(1)}%</td>
+      <td class="py-2.5 pr-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${s.bg} ${s.text}">${r.lv}</span></td></tr>`;
+  }).join(''));
+
+  /* ----- Pipeline ----- */
+  const byStatus={}; cur.q.forEach(q=>byStatus[q.status]=(byStatus[q.status]||0)+q.revenue);
+  const stArr=Object.entries(byStatus).sort((a,b)=>b[1]-a[1]);
+  const doneRev=stArr.filter(([k])=>DONE_STATUS.includes(k.toLowerCase())).reduce((s,x)=>s+x[1],0);
+  const pipeRev=rev-doneRev;
+  drawChart('chStatus',{type:'bar',
+    data:{labels:stArr.map(x=>x[0]),datasets:[{data:stArr.map(x=>x[1]),
+      backgroundColor:stArr.map(([k])=>DONE_STATUS.includes(k.toLowerCase())?'#10b981':'#f59e0b'),borderRadius:5,maxBarThickness:20}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${money(c.parsed.x)} บาท (${rev?(c.parsed.x/rev*100).toFixed(1):0}%)`}}},
+      scales:{x:{beginAtZero:true,grid:{color:'rgba(148,163,184,.15)'},ticks:{callback:v=>num(v),font:{size:9.5},maxTicksLimit:6}},
+        y:{grid:{display:false},ticks:{font:{size:10}}}}}
+  });
+  setHtml('pipeNote',
+    `<span class="text-emerald-600">■</span> ปิดงานแล้ว <b>${num(doneRev)}</b> บาท (${rev?(doneRev/rev*100).toFixed(1):0}%) · `+
+    `<span class="text-amber-500">■</span> ระหว่างดำเนินการ <b>${num(pipeRev)}</b> บาท (${rev?(pipeRev/rev*100).toFixed(1):0}%)`);
+
+  /* ----- Company / Lab / Loc / Svc ----- */
+  const topComp=compRank.slice(0,10);
+  const wrapName=n=>{
+    if(n.length<=26) return n;
+    const parts=[];let line='';
+    n.split(/(\s+)/).forEach(w=>{ if((line+w).length>26&&line.trim()){parts.push(line.trim());line=w.trimStart();} else line+=w; });
+    if(line.trim()) parts.push(line.trim());
+    if(parts.length>2){ const rest=parts.slice(1).join(' '); return [parts[0],rest.length>26?rest.slice(0,25)+'…':rest]; }
+    return parts.length?parts:[n];
+  };
+  const top10Rev=topComp.reduce((t,x)=>t+x[1],0);
+  setTxt('compTopShare',`${STATE.year==='ALL'?'ทุกปี':'ปี '+STATE.year}${STATE.months.size?' · '+STATE.months.size+' เดือนที่เลือก':''} · Top 10 รวม ${money(top10Rev)} บาท (${rev?(top10Rev/rev*100).toFixed(1):0}% ของรายได้ทั้งหมด)`);
+  const barLabelPlugin={id:'barEndLabel',afterDatasetsDraw(ch){
+    const {ctx}=ch,meta=ch.getDatasetMeta(0),dk=document.documentElement.classList.contains('dark');
+    ctx.save(); ctx.font='600 11px Kanit, Sarabun, sans-serif'; ctx.textBaseline='middle';
+    meta.data.forEach((bar,i)=>{
+      const v=topComp[i][1],txt=`${num(v)}  (${rev?(v/rev*100).toFixed(1):0}%)`,w=ctx.measureText(txt).width;
+      const inside=bar.x+w+14>ch.chartArea.right;
+      ctx.fillStyle=inside?'#fff':(dk?'#cbd5e1':'#334155');
+      ctx.textAlign=inside?'right':'left';
+      ctx.fillText(txt,inside?bar.x-8:bar.x+8,bar.y);
+    });
+    ctx.restore();
+  }};
+  drawChart('chCompany',{type:'bar',plugins:[barLabelPlugin],
+    data:{labels:topComp.map(x=>wrapName(x[0])),
+      datasets:[{data:topComp.map(x=>x[1]),
+        backgroundColor:topComp.map(x=>isNewCustomerYear(x[0],curY)?'#22c55e':'#0072BC'),
+        hoverBackgroundColor:'#00A0E9',borderRadius:6,barPercentage:.78,categoryPercentage:.9,maxBarThickness:30}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:12}},
+      onClick:(e,els)=>{ if(els.length) openCompModal(topComp[els[0].index][0]); },
+      onHover:(e,els)=>{ e.native.target.style.cursor=els.length?'pointer':'default'; },
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:c=>topComp[c[0].dataIndex][0],
+        label:c=>`${money(c.parsed.x)} บาท (${rev?(c.parsed.x/rev*100).toFixed(1):0}%)`,
+        afterLabel:c=>(isNewCustomerYear(topComp[c.dataIndex][0],curY)?'🌱 ลูกค้าใหม่ปีนี้\n':'')+'คลิกเพื่อดูรายละเอียด'}}},
+      scales:{x:{beginAtZero:true,grace:'18%',grid:{color:'rgba(148,163,184,.15)'},ticks:{callback:v=>num(v),font:{size:10.5},maxTicksLimit:6}},
+        y:{grid:{display:false},ticks:{autoSkip:false,font:{size:11.5},padding:6}}}}
+  });
+  const dark=document.documentElement.classList.contains('dark');
+  const labMap={}; cur.d.forEach(d=>{(labMap[d.lab]=labMap[d.lab]||new Set()).add(d.sampleId);});
+  const labArr=Object.entries(labMap).map(([k,v])=>[k,v.size]).sort((a,b)=>b[1]-a[1]);
+  drawChart('chLab',{type:'doughnut',
+    data:{labels:labArr.map(x=>x[0]),datasets:[{data:labArr.map(x=>x[1]),backgroundColor:PALETTE,borderWidth:2.5,borderColor:dark?'#1e293b':'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',
+      plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:7,padding:10,font:{size:11}}},
+        tooltip:{callbacks:{label:c=>`${c.label}: ${num(c.parsed)} ตัวอย่าง`}}}}
+  });
+  const locMap={}; cur.d.forEach(d=>{(locMap[d.loc]=locMap[d.loc]||new Set()).add(d.sampleId);});
+  const locArr=Object.entries(locMap).map(([k,v])=>[k,v.size]).sort((a,b)=>b[1]-a[1]);
+  drawChart('chLoc',{type:'bar',
+    data:{labels:locArr.map(x=>x[0]),datasets:[{data:locArr.map(x=>x[1]),backgroundColor:'#00A0E9',hoverBackgroundColor:'#003E7E',borderRadius:6,maxBarThickness:36}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{beginAtZero:true,grid:{color:'rgba(148,163,184,.15)'},ticks:{font:{size:10}}},x:{grid:{display:false},ticks:{font:{size:10}}}}}
+  });
+  const bySvc={}; cur.q.forEach(q=>bySvc[q.svc]=(bySvc[q.svc]||0)+q.revenue);
+  const svcArr=Object.entries(bySvc).sort((a,b)=>b[1]-a[1]);
+  drawChart('chSvc',{type:'doughnut',
+    data:{labels:svcArr.map(x=>x[0]),datasets:[{data:svcArr.map(x=>x[1]),backgroundColor:PALETTE,borderWidth:2.5,borderColor:dark?'#1e293b':'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'55%',
+      plugins:{legend:{position:'right',labels:{usePointStyle:true,boxWidth:7,padding:8,font:{size:10}}},
+        tooltip:{callbacks:{label:c=>`${c.label}: ${money(c.parsed)} บาท`}}}}
+  });
+
+  /* ----- Service Group YoY ----- */
+  (function(){
+    const mt=($('fSvcYoyMetric')||{}).value||'rev';
+    const prevY=curY-1;
+    const mSet=STATE.months&&STATE.months.size?STATE.months:null;
+    const upTo=mSet?null:(curY===refY?refM:12);
+    const inBasis=m=>mSet?mSet.has(m):m<=upTo;
+    const basis=mSet?`เดือน ${[...mSet].sort((a,b)=>a-b).map(m=>MONTH_TH[m-1]).join(', ')}`
+      :(upTo===12?'ทั้งปี':`YTD ม.ค.–${MONTH_TH[upTo-1]}`);
+    const grab=y=>{
+      const q=MODEL.quotes.filter(x=>x.y===y&&inBasis(x.m)&&passNonDate(x));
+      const ids=new Set(q.map(x=>x.requestId));
+      const d=MODEL.details.filter(x=>ids.has(x.requestId)&&(STATE.samp.size===0||STATE.samp.has(x.sampleStatus)));
+      const o={};
+      const ensure=k=>o[k]=o[k]||{rev:0,qs:new Set(),ss:new Set()};
+      q.forEach(x=>{const e=ensure(x.svc);e.rev+=x.revenue;e.qs.add(x.qano);});
+      d.forEach(x=>{ensure(x.svc).ss.add(x.sampleId);});
+      return o;
+    };
+    const A=grab(curY),B=grab(prevY);
+    const val=e=>!e?0:mt==='rev'?e.rev:mt==='quote'?e.qs.size:e.ss.size;
+    const names=[...new Set([...Object.keys(A),...Object.keys(B)])];
+    let rows=names.map(n=>({n,cur:val(A[n]),prev:val(B[n])}))
+      .filter(r=>r.cur||r.prev).sort((a,b)=>b.cur-a.cur||b.prev-a.prev);
+    const tC=rows.reduce((t,r)=>t+r.cur,0),tP=rows.reduce((t,r)=>t+r.prev,0);
+    const unit=mt==='rev'?'บาท':mt==='quote'?'ใบ':'ตัวอย่าง';
+    const f=mt==='rev'?num:num;
+    const pctOf=(c,p)=>p>0?(c-p)/p*100:null;
+    const badge=(c,p)=>{
+      const pc=pctOf(c,p);
+      if(pc===null) return c>0?'<span class="idle idle-md">ใหม่</span>':'<span class="text-slate-400">—</span>';
+      const up=pc>=0;
+      return `<span class="idle ${up?'':'idle-hi'}" style="${up?'background:#dcfce7;color:#15803d':''}">${up?'▲ +':'▼ '}${pc.toFixed(1)}%</span>`;
+    };
+    setTxt('thSvcPrev',`ปี ${prevY}`); setTxt('thSvcCur',`ปี ${curY}`);
+    setTxt('svcYoyBasis',`${curY} vs ${prevY} · ${basis}`);
+    setHtml('tbSvcYoy',rows.length?rows.map(r=>{
+      const d=r.cur-r.prev;
+      return `<tr class="data-row border-b border-slate-100 dark:border-slate-800">
+        <td class="nm pl-3 font-medium">${esc(r.n)}</td>
+        <td class="text-right text-slate-500">${f(r.prev)}</td>
+        <td class="text-right font-semibold">${f(r.cur)}</td>
+        <td class="text-right ${d>=0?'text-emerald-600':'text-rose-600'}">${d>=0?'+':''}${f(d)}</td>
+        <td class="pr-3 text-center">${badge(r.cur,r.prev)}</td></tr>`;}).join('')
+      +`<tr class="border-t-2 border-slate-200 dark:border-slate-700 font-bold">
+        <td class="pl-3">รวม</td><td class="text-right">${f(tP)}</td><td class="text-right">${f(tC)}</td>
+        <td class="text-right ${tC-tP>=0?'text-emerald-600':'text-rose-600'}">${tC-tP>=0?'+':''}${f(tC-tP)}</td>
+        <td class="pr-3 text-center">${badge(tC,tP)}</td></tr>`
+      :`<tr><td colspan="5" class="py-6 text-center text-slate-400">ไม่มีข้อมูล</td></tr>`);
+    drawChart('chSvcYoy',{type:'bar',
+      data:{labels:rows.map(r=>r.n.length>22?r.n.slice(0,20)+'…':r.n),datasets:[
+        {label:`ปี ${prevY}`,data:rows.map(r=>r.prev),backgroundColor:'#94a3b8',borderRadius:4,maxBarThickness:22},
+        {label:`ปี ${curY}`,data:rows.map(r=>r.cur),backgroundColor:'#0072BC',borderRadius:4,maxBarThickness:22}]},
+      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:7,font:{size:11}}},
+          tooltip:{callbacks:{title:c=>rows[c[0].dataIndex].n,
+            label:c=>`${c.dataset.label}: ${f(c.parsed.x)} ${unit}`,
+            afterBody:c=>{const r=rows[c[0].dataIndex],pc=pctOf(r.cur,r.prev);return pc===null?'YoY: ใหม่':`YoY: ${pc>=0?'+':''}${pc.toFixed(1)}%`;}}}},
+        scales:{x:{beginAtZero:true,grid:{color:'rgba(148,163,184,.15)'},ticks:{callback:v=>num(v),font:{size:9.5},maxTicksLimit:6}},
+          y:{grid:{display:false},ticks:{font:{size:10}}}}}
+    });
+    setHtml('svcYoyNote',`เทียบช่วงเดียวกันของปี ${prevY} (${basis}) · ใช้ตัวกรองที่เลือกอยู่ทั้งหมด${mt==='rev'?'':' · ตัวอย่างนับ distinct sampleId'}`);
+    LAST_SVC_YOY={curY,prevY,basis,unit,rows};
+  })();
+
+  /* ----- Customer-level YoY: Revenue Bridge + Declining customers ----- */
+  (function(){
+    const prevY=curY-1;
+    const mSet=STATE.months&&STATE.months.size?STATE.months:null;
+    const upTo=mSet?null:(curY===refY?refM:12);
+    const inB=m=>mSet?mSet.has(m):m<=upTo;
+    const basis=mSet?`เดือน ${[...mSet].sort((a,b)=>a-b).map(m=>MONTH_TH[m-1]).join(', ')}`
+      :(upTo===12?'ทั้งปี':`YTD ม.ค.–${MONTH_TH[upTo-1]}`);
+    const agg=y=>{const o=new Map();
+      MODEL.quotes.forEach(q=>{ if(q.y!==y||!inB(q.m)||!passNonDate(q)) return;
+        let e=o.get(q.company); if(!e){e={rev:0,qs:new Set()};o.set(q.company,e);} e.rev+=q.revenue; e.qs.add(q.qano); });
+      return o;};
+    const A=agg(curY),B=agg(prevY);
+    const cats={new:[],ret:[],up:[],down:[],lost:[]};
+    let tPrev=0,tCur=0;
+    new Set([...A.keys(),...B.keys()]).forEach(c=>{
+      const a=A.get(c),b=B.get(c), cur=a?a.rev:0, prev=b?b.rev:0, d=cur-prev;
+      if(!cur&&!prev) return;
+      tPrev+=prev; tCur+=cur;
+      const rec={c,cur,prev,d,qc:a?a.qs.size:0,qp:b?b.qs.size:0};
+      if(prev<=0&&cur>0){ const f=MODEL.firstSeen[c]; (f&&f.y===curY?cats.new:cats.ret).push(rec); }
+      else if(prev>0&&cur<=0) cats.lost.push(rec);
+      else if(d>0) cats.up.push(rec);
+      else if(d<0) cats.down.push(rec);
+    });
+    const META=[
+      {k:'new', label:'ลูกค้าใหม่',  color:'#22c55e'},
+      {k:'ret', label:'ลูกค้ากลับมา',color:'#14b8a6'},
+      {k:'up',  label:'ซื้อเพิ่ม',    color:'#84cc16'},
+      {k:'down',label:'ซื้อลด',       color:'#f59e0b'},
+      {k:'lost',label:'หายไป (ปีนี้ไม่มียอด)',color:'#ef4444'}];
+    META.forEach(m=>{ m.arr=cats[m.k].slice().sort((a,b)=>Math.abs(b.d)-Math.abs(a.d)); m.sum=m.arr.reduce((t,x)=>t+x.d,0); });
+    const dTot=tCur-tPrev, pctTot=tPrev>0?dTot/tPrev*100:null;
+    const sgn=v=>(v>=0?'+':'−')+num(Math.abs(v));
+
+    setTxt('bridgeBasis',`${curY} vs ${prevY} · ${basis}`);
+    const big=META.slice().sort((a,b)=>Math.abs(b.sum)-Math.abs(a.sum))[0];
+    setHtml('bridgeStory', (tPrev||tCur)?
+      `รายได้ ${basis} ปี ${curY} <b>${dTot>=0?'เพิ่มขึ้น':'ลดลง'} ${num(Math.abs(dTot))} บาท</b>${pctTot===null?'':` (${pctTot>=0?'+':''}${pctTot.toFixed(1)}%)`} เทียบปี ${prevY} · ที่มาที่ใหญ่ที่สุดคือ <b>${big.label}</b> ${sgn(big.sum)} บาท จาก ${num(big.arr.length)} ราย`
+      :'ไม่มีข้อมูลในช่วงที่เลือก');
+
+    setHtml('tbBridge',(tPrev||tCur)?
+      `<tr class="border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/40"><td class="pl-3 py-2 font-semibold" colspan="2">ยอดปี ${prevY}</td><td class="text-right font-semibold">${num(tPrev)}</td><td></td><td></td></tr>`
+      +META.map(m=>`<tr class="data-row border-b border-slate-100 dark:border-slate-800 align-top">
+        <td class="pl-3"><span class="dot" style="background:${m.color}"></span>${m.label}</td>
+        <td class="text-right">${num(m.arr.length)}</td>
+        <td class="text-right font-semibold ${m.sum>=0?'text-emerald-600':'text-rose-600'}">${m.arr.length?sgn(m.sum):'–'}</td>
+        <td class="text-right text-slate-500">${tPrev>0&&m.arr.length?(m.sum/tPrev*100>=0?'+':'')+(m.sum/tPrev*100).toFixed(1)+'%':'–'}</td>
+        <td class="pr-3 nm text-[12px]">${m.arr.slice(0,2).map(x=>`${compLink(x.c)} <span class="text-slate-400">(${sgn(x.d)})</span>`).join('<br>')||'–'}</td></tr>`).join('')
+      +`<tr class="border-t-2 border-slate-200 dark:border-slate-700 font-bold"><td class="pl-3 py-2" colspan="2">ยอดปี ${curY}</td><td class="text-right">${num(tCur)}</td>
+        <td class="text-right ${dTot>=0?'text-emerald-600':'text-rose-600'}">${pctTot===null?'–':(pctTot>=0?'+':'')+pctTot.toFixed(1)+'%'}</td><td></td></tr>`
+      :`<tr><td colspan="5" class="py-6 text-center text-slate-400">ไม่มีข้อมูล</td></tr>`);
+
+    // waterfall
+    const labels=[`ปี ${prevY}`,...META.map(m=>m.label.replace(' (ปีนี้ไม่มียอด)','')),`ปี ${curY}`];
+    const bars=[[0,tPrev]], cols=['#94a3b8'], vals=[tPrev], isTot=[true];
+    let run=tPrev;
+    META.forEach(m=>{ const end=run+m.sum; bars.push([Math.min(run,end),Math.max(run,end)]); cols.push(m.color); vals.push(m.sum); isTot.push(false); run=end; });
+    bars.push([0,tCur]); cols.push('#0072BC'); vals.push(tCur); isTot.push(true);
+    const wfLabel={id:'wfLabel',afterDatasetsDraw(ch){
+      const {ctx}=ch,meta=ch.getDatasetMeta(0),dk=document.documentElement.classList.contains('dark');
+      ctx.save(); ctx.font='600 11px Kanit, Sarabun, sans-serif'; ctx.textAlign='center'; ctx.fillStyle=dk?'#e2e8f0':'#334155';
+      meta.data.forEach((bar,i)=>{ const v=vals[i]; if(!isTot[i]&&!v) return;
+        ctx.fillText(isTot[i]?num(v):sgn(v),bar.x,Math.min(bar.y,bar.base)-6); });
+      ctx.restore();}};
+    drawChart('chBridge',{type:'bar',plugins:[wfLabel],
+      data:{labels,datasets:[{data:bars,backgroundColor:cols,borderRadius:5,barPercentage:.7,categoryPercentage:.85}]},
+      options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:20}},
+        plugins:{legend:{display:false},tooltip:{callbacks:{
+          label:c=>isTot[c.dataIndex]?`${money(vals[c.dataIndex])} บาท`:`${vals[c.dataIndex]>=0?'+':'−'}${money(Math.abs(vals[c.dataIndex]))} บาท (${META[c.dataIndex-1].arr.length} ราย)`}}},
+        scales:{x:{grid:{display:false},ticks:{font:{size:10.5},maxRotation:0}},
+          y:{beginAtZero:true,grid:{color:'rgba(148,163,184,.15)'},ticks:{callback:v=>num(v),font:{size:10},maxTicksLimit:6}}}}
+    });
+    LAST_BRIDGE={curY,prevY,basis,tPrev,tCur,META};
+
+    /* ---- declining customers ---- */
+    const thr=+(($('fDeclPct')||{}).value||30), minBase=+(($('fDeclMin')||{}).value||0);
+    const dec=cats.down.filter(x=>x.prev>=minBase&&(-x.d/x.prev*100)>=thr&&!(STATE.exclInternal&&isExcludedCustomer(x.c)))
+      .sort((a,b)=>a.d-b.d);
+    const dSum=dec.reduce((t,x)=>t+x.d,0), dBase=dec.reduce((t,x)=>t+x.prev,0), dMax=Math.max(1,...dec.map(x=>-x.d));
+    setTxt('thDeclPrev',`ปี ${prevY}`); setTxt('thDeclCur',`ปี ${curY}`);
+    setTxt('declCount',dec.length?`${num(dec.length)} ราย · ลดลงรวม ${num(-dSum)} บาท`:'0 ราย');
+    setTxt('declNote',`เทียบ ${basis} ปี ${curY} กับปี ${prevY} · เฉพาะลูกค้าที่ยังมียอดปีนี้ และลดลง ≥ ${thr}%`
+      +(minBase?` · ยอดปีก่อน ≥ ${num(minBase)} บาท`:'')+` · ลูกค้าที่ไม่มียอดเลวอยู่ในรายการ "เสี่ยงหาย"`
+      +(dec.length&&dBase?` · รวมแล้วลดลง ${(-dSum/dBase*100).toFixed(1)}% ของยอดปีก่อนของกลุ่มนี้`:''));
+    setHtml('tbDecl',dec.length?dec.map((x,i)=>{
+      const pc=-x.d/x.prev*100, cls=pc>=70?'idle-hi':pc>=50?'idle-md':'idle-lo';
+      return `<tr class="data-row border-b border-slate-100 dark:border-slate-800 hover:bg-amber-50/60 dark:hover:bg-slate-800/50">
+        <td class="pl-3"><span class="rank ${i<5?'top':''}">${i+1}</span></td>
+        <td class="nm font-medium">${compLink(x.c)}</td>
+        <td class="text-right text-slate-500">${money(x.prev)}</td>
+        <td class="text-right font-semibold">${money(x.cur)}</td>
+        <td class="text-right"><div class="font-semibold text-rose-600">−${money(-x.d)}</div>
+          <div class="mbar bg-rose-400" style="width:${Math.max(4,-x.d/dMax*100)}%"></div></td>
+        <td class="text-center"><span class="idle ${cls}">−${pc.toFixed(0)}%</span></td>
+        <td class="pr-3 text-right text-slate-500">${num(x.qp)} → ${num(x.qc)}</td></tr>`;}).join('')
+      :`<tr><td colspan="7" class="py-6 text-center text-slate-400">ไม่มีลูกค้าที่ลดลงตามเกณฑ์นี้</td></tr>`);
+    LAST_DECL={curY,prevY,basis,thr,minBase,rows:dec};
+
+    /* ---- live line in definitions ---- */
+    setHtml('defsLive',
+      `<b>ข้อมูล ณ ตอนนี้:</b> ข้อมูลล่าสุดในตัวกรองนี้คือ ${MONTH_TH[refM-1]} ${refY} · ${num(MODEL.quotes.length)} ใบเสนอราคา · ขอบเขต ${esc(scopeText())}<br>`
+      +`<b>ตัวเลือกที่เปิดอยู่:</b> รวมชื่อลูกค้าอัตโนมัติ ${STATE.autoClean?'เปิด':'ปิด'} · รวมชื่อคล้ายกัน ${STATE.fuzzy?'เปิด':'ปิด'} · ยกเว้นลูกค้าภายใน ${STATE.exclInternal?'เปิด':'ปิด'} · โหมดรายได้ลูกค้าใหม่ ${STATE.ncMode==='cohort'?'Cohort':'ทุกเดือน'}`);
+  })();
+
+  /* ----- Contact ----- */
+  const contactMap={};
+  cur.q.forEach(q=>{
+    const cn=q.contactName||'ไม่ระบุ';
+    contactMap[cn]=contactMap[cn]||{rev:0,quotes:new Set(),comps:new Set()};
+    contactMap[cn].rev+=q.revenue; contactMap[cn].quotes.add(q.qano); contactMap[cn].comps.add(q.company);
+  });
+  const contactArr=Object.entries(contactMap).map(([k,v])=>[k,v.rev,v.quotes.size,v.comps.size]).sort((a,b)=>b[1]-a[1]);
+  const contactTop=contactArr.slice(0,10);
+  setHtml('tbContact',contactTop.length?contactTop.map((x,i)=>`
+    <tr class="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50">
+      <td class="py-2.5 pl-3 text-slate-400">${i+1}</td>
+      <td class="py-2.5 font-medium text-slate-700 dark:text-slate-200">${esc(x[0])}</td>
+      <td class="py-2.5 text-right">${num(x[2])}</td>
+      <td class="py-2.5 text-right">${num(x[3])}</td>
+      <td class="py-2.5 pr-3 text-right font-semibold text-irpc-700 dark:text-sky-400">${money(x[1])}</td>
+    </tr>`).join(''):`<tr><td colspan="5" class="py-6 text-center text-slate-400">ไม่มีข้อมูลผู้ติดต่อ</td></tr>`);
+  LAST_CT=contactArr;
+
+  /* ----- Test by month ----- */
+  const isRev=STATE.metric==='rev';
+  const fmtV=v=>isRev?money(v)+' บาท':num(v)+' รายการ';
+  const qYear=MODEL.quotes.filter(x=>x.y===curY&&passNonDate(x));
+  const monthOf=new Map(),revOfReq=new Map();
+  qYear.forEach(q=>{monthOf.set(q.requestId,q.m);revOfReq.set(q.requestId,q.revenue);});
+  const dYear=MODEL.details.filter(x=>monthOf.has(x.requestId)&&(STATE.samp.size===0||STATE.samp.has(x.sampleStatus)));
+  const byReq={}; dYear.forEach(x=>{(byReq[x.requestId]=byReq[x.requestId]||[]).push(x);});
+  const byGrpMonth={},totalByGrp={};
+  Object.entries(byReq).forEach(([rid,list])=>{
+    const m=monthOf.get(rid),seen=new Set(),uniq=[];
+    list.forEach(x=>{const k=tKey(x);if(!seen.has(k)){seen.add(k);uniq.push(x);}});
+    const per=uniq.length?(revOfReq.get(rid)||0)/uniq.length:0;
+    uniq.forEach(x=>{
+      const g=STATE.dim==='svc'?x.svc:x.paramDesc,val=isRev?per:1;
+      (byGrpMonth[g]=byGrpMonth[g]||Array(12).fill(0))[m-1]+=val;
+      totalByGrp[g]=(totalByGrp[g]||0)+val;
+    });
+  });
+  const ranked=Object.entries(totalByGrp).sort((a,b)=>b[1]-a[1]);
+  const N=STATE.topN===0?ranked.length:STATE.topN;
+  const topG=ranked.slice(0,N).map(x=>x[0]),restG=ranked.slice(N).map(x=>x[0]);
+  const dsTest=topG.map((p,i)=>({label:p.length>34?p.slice(0,32)+'…':p,fullLabel:p,
+    data:byGrpMonth[p].map(v=>+v.toFixed(2)),backgroundColor:PALETTE[i%PALETTE.length],
+    borderRadius:4,maxBarThickness:STATE.stacked?34:Math.max(6,Math.floor(180/Math.max(1,N)))}));
+  let otherArr=Array(12).fill(0),otherTotal=0;
+  if(restG.length){
+    restG.forEach(p=>byGrpMonth[p].forEach((v,i)=>otherArr[i]+=v));
+    otherTotal=otherArr.reduce((a,b)=>a+b,0);
+    if(!STATE.hideOther) dsTest.push({label:`อื่นๆ (${restG.length} รายการ)`,fullLabel:`อื่นๆ (${restG.length} รายการ)`,
+      data:otherArr.map(v=>+v.toFixed(2)),backgroundColor:'#cbd5e1',borderRadius:4,maxBarThickness:34});
+  }
+  const monthTotal=Array(12).fill(0);
+  dsTest.forEach(d=>d.data.forEach((v,i)=>monthTotal[i]+=v));
+  const grandTotal=monthTotal.reduce((a,b)=>a+b,0);
+  setTxt('tmTitle',`🧫 ${isRev?'รายได้':'จำนวนรายการทดสอบ'}รายเดือน แยกตาม${STATE.dim==='svc'?'กลุ่มบริการ':'รายการทดสอบ'} · ปี ${curY}`);
+  drawChart('chTestMonth',{type:'bar',
+    data:{labels:MONTH_TH,datasets:dsTest.length?dsTest:[{label:'ไม่มีข้อมูล',data:Array(12).fill(0),backgroundColor:'#e2e8f0'}]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:7,padding:9,font:{size:10}}},
+        tooltip:{itemSort:(a,b)=>b.parsed.y-a.parsed.y,callbacks:{
+          title:c=>`${c[0].label} ${curY} · รวม ${fmtV(monthTotal[c[0].dataIndex])}`,
+          label:c=>{if(!c.parsed.y)return null;
+            const f=c.dataset.fullLabel||c.dataset.label;
+            const pct=monthTotal[c.dataIndex]?(c.parsed.y/monthTotal[c.dataIndex]*100).toFixed(1):'0.0';
+            return `${f}: ${fmtV(c.parsed.y)} (${pct}%)`;}}}},
+      scales:{x:{stacked:STATE.stacked,grid:{display:false},ticks:{font:{size:10}}},
+        y:{stacked:STATE.stacked,beginAtZero:true,grid:{color:'rgba(148,163,184,.15)'},
+          ticks:{font:{size:9.5},callback:v=>num(v),maxTicksLimit:8}}}}
+  });
+  const sumChips=topG.slice(0,6).map((p,i)=>{
+    const t=totalByGrp[p],pct=grandTotal?(t/grandTotal*100).toFixed(1):'0.0',col=PALETTE[i%PALETTE.length];
+    return `<span class="text-[10.5px] px-2.5 py-1 rounded-full border" style="border-color:${col}33;background:${col}12">
+      <b style="color:${col}">■</b> ${esc(p.length>26?p.slice(0,24)+'…':p)} · <b>${num(t)}</b>${isRev?' บาท':''} (${pct}%)</span>`;
+  });
+  if(restG.length) sumChips.push(`<span class="text-[10.5px] px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 border border-slate-200 dark:border-slate-700">อื่นๆ ${restG.length} รายการ · <b>${num(otherTotal)}</b></span>`);
+  setHtml('tmSummary',sumChips.join(''));
+  setHtml('tmNote',isRev
+    ?`ปันส่วนรายได้: รายได้ใบเสนอราคา ÷ จำนวนรายการทดสอบ (distinct) · รวมทั้งปี <b>${money(grandTotal)} บาท</b>`
+    :`นับแบบ distinct: sampleId + sampleDesc + variantId + paramListId · รวมทั้งปี <b>${num(grandTotal)} รายการ</b>`);
+  LAST_TM={topG,restG,byGrpMonth,monthTotal,curY,dim:STATE.dim,metric:STATE.metric,totalByGrp,otherArr,grandTotal};
+
+  /* ----- Top tests ----- */
+  const testByReq={}; cur.d.forEach(d=>{(testByReq[d.requestId]=testByReq[d.requestId]||[]).push(d);});
+  const agg={};
+  cur.q.forEach(q=>{
+    const list=testByReq[q.requestId]; if(!list||!list.length) return;
+    const keys=[...new Set(list.map(tKey))],per=q.revenue/keys.length;
+    list.forEach(x=>{
+      const a=agg[x.paramDesc]=agg[x.paramDesc]||{rev:0,svc:x.svc,s:new Set(),t:new Set(),lt:[]};
+      a.s.add(x.sampleId); a.t.add(tKey(x));
+      if(x.leadTime!=null) a.lt.push(x.leadTime);
+    });
+    keys.forEach(k=>{const pd=list.find(x=>tKey(x)===k).paramDesc;agg[pd].rev+=per;});
+  });
+  const TOP_TEST_N=50;
+  const topTests=Object.entries(agg).sort((a,b)=>b[1].rev-a[1].rev).slice(0,TOP_TEST_N);
+  let cumRev=0;
+  setHtml('tbTop',topTests.length?topTests.map(([k,v],i)=>{
+    const lt=v.lt.length?v.lt.reduce((a,b)=>a+b,0)/v.lt.length:null;
+    cumRev+=v.rev; v._cum=cumRev;
+    return `<tr class="data-row border-b border-slate-100 dark:border-slate-800 hover:bg-irpc-50/50 dark:hover:bg-slate-800/50">
+      <td class="py-2.5 pl-3 text-slate-400">${i+1}</td>
+      <td class="py-2.5 font-medium text-slate-700 dark:text-slate-200">${esc(k)}</td>
+      <td class="py-2.5"><span class="chip text-[10px] px-2 py-0.5 rounded-full">${esc(v.svc)}</span></td>
+      <td class="py-2.5 text-right">${num(v.s.size)}</td>
+      <td class="py-2.5 text-right">${num(v.t.size)}</td>
+      <td class="py-2.5 text-right font-medium" style="color:${ltColor(lt)}">${day1(lt)}</td>
+      <td class="py-2.5 text-right font-semibold text-irpc-700 dark:text-sky-400">${money(v.rev)}</td>
+      <td class="py-2.5 text-right text-slate-500">${rev?(v.rev/rev*100).toFixed(1):'0.0'}%</td>
+      <td class="py-2.5 pr-3 text-right text-slate-400">${rev?(v._cum/rev*100).toFixed(1):'0.0'}%</td></tr>`;
+  }).join(''):`<tr><td colspan="9" class="py-6 text-center text-slate-400">ไม่มีข้อมูล</td></tr>`);
+  setTxt('topTestShare',topTests.length?`Top ${topTests.length} รวม ${money(cumRev)} บาท (${rev?(cumRev/rev*100).toFixed(1):0}% ของรายได้ทั้งหมด)`:'–');
+
+  /* ----- Insights & Recommendations ----- */
+  const ins=[],rec=[];
+  const li=(ic,t,c='text-slate-600 dark:text-slate-300')=>`<li class="flex gap-2.5 items-start"><span>${ic}</span><span class="${c}">${t}</span></li>`;
+  const R='text-slate-700 dark:text-slate-200';
+  const lvM=kpiLevelMonth(mNow);
+  const mgN=MODEL.nameMap.groups.filter(g=>g.members.length>1).length;
+  if(mgN) ins.push(li('🔤',`รวมชื่อลูกค้าที่สะกดต่างกัน <b>${num(mgN)}</b> กลุ่ม (${num(Object.keys(MODEL.rawStats).length)} ชื่อดิบ → ${num(MODEL.companies.length)} ราย)`));
+  ins.push(li('📌',`ขอบเขตที่เลือก รายได้รวม <b>${money(rev)} บาท</b> · <b>${num(nQuote)}</b> ใบ · <b>${num(nSample)}</b> ตัวอย่าง · <b>${num(nTest)}</b> รายการทดสอบ`));
+  ins.push(li(mNow>=mPrev?'📈':'📉',`${MONTH_TH[refM-1]} ${refY} ทำรายได้ ${money(mNow)} บาท ${mNow>=mPrev?'เพิ่มขึ้น':'ลดลง'} <b>${Math.abs(mPrev>0?(mNow-mPrev)/mPrev*100:100).toFixed(1)}%</b> จากเดือนก่อน`));
+  ins.push(li(lvM==='L1'?'🔴':lvM==='L2'?'🟡':lvM==='L3'?'🟢':'🔵',`KPI รายเดือนระดับ <b>${lvM}</b> ${['L1','L2'].includes(lvM)?`ต่ำกว่าเป้า L3 อยู่ <b>${num(KPI_M.L3-mNow)} บาท</b>`:'ผ่านเกณฑ์แล้ว'}`));
+  ins.push(li('🔮',`คาดการณ์สิ้นปี ${curY} ที่ <b>${num(proj)} บาท</b> → ระดับ <b>${kpiLevelYear(proj)}</b>`));
+  ins.push(li('🌱',`ปี ${curY} ได้ลูกค้าใหม่ <b class="text-emerald-600">${num(newCumM[11])}</b> ราย · รายได้ <b>${num(newRevYTD)}</b> บาท (${nrTotal?(newRevYTD/nrTotal*100).toFixed(1):0}%)`));
+  if(prevComps.size) ins.push(li(retentionRate>=60?'🔁':'⚠️',`Retention <b>${retentionRate.toFixed(1)}%</b> · Churn <b>${churnRate.toFixed(1)}%</b> (ฐานลูกค้าปี ${curY-1} จำนวน ${prevComps.size} ราย)`));
+  if(atRiskList.length) ins.push(li('🚨',`ลูกค้าเสี่ยงหาย <b class="text-rose-600">${num(atRiskList.length)} ราย</b> เคยสร้างรายได้รวม ${num(atRiskRev)} บาทในปี ${curY-1}`));
+  if(ltAll!=null) ins.push(li(ltAll<=LT_GOOD?'⚡':ltAll<=LT_WARN?'⏱':'🐢',`Lead Time เฉลี่ย <b style="color:${ltColor(ltAll)}">${day1(ltAll)} วัน</b> · P90 ${day1(ltP90)} วัน (90% ของงานเสร็จภายในนี้)`));
+  ins.push(li('🚦',`งานด่วน: <b class="text-amber-600">Urgent ${num(pStat.Urgent.cnt)} ใบ (${pStat.Urgent.pctCnt.toFixed(1)}%)</b> · <b class="text-rose-600">Express ${num(pStat.Express.cnt)} ใบ (${pStat.Express.pctCnt.toFixed(1)}%)</b> จาก ${num(qTotal)} ใบ`));
+  if(contactTop.length) ins.push(li('👤',`ผู้ติดต่อที่ทำรายได้สูงสุด <b>${esc(contactTop[0][0])}</b> ${money(contactTop[0][1])} บาท จาก ${num(contactTop[0][3])} ลูกค้า`));
+
+  const needL3=left>0?(KPI_Y.L3-ytd)/left:0;
+  if(needL3>0&&left>0) rec.push(li('🎯',`ต้องทำเฉลี่ย <b>${num(needL3)} บาท/เดือน</b> ในอีก ${left} เดือน จึงถึงเป้า L3 รายปี`,R));
+  else rec.push(li('🏆',`รายได้สะสมผ่านเป้า L3 รายปีแล้ว — โฟกัสดัน L4/L5`,R));
+  if(atRiskList.length) rec.push(li('📞',`ให้ทีมขายโทรติดตาม Top 5 ลูกค้าเสี่ยงหาย: ${atRiskList.slice(0,5).map(x=>`<b>${esc(x.company.length>28?x.company.slice(0,26)+'…':x.company)}</b>`).join(', ')}`,R));
+  if(MODEL.health.noPrio.length) rec.push(li('🚦',`มี <b>${num(MODEL.health.noPrio.length)}</b> ใบไม่ระบุ sPriority — ระบบนับเป็น Normal ควรเติมให้ครบ`,R));
+  if(pStat.Express.cnt&&pStat.Express.lt!=null&&pStat.Normal.lt!=null&&pStat.Express.lt>=pStat.Normal.lt)
+    rec.push(li('⚠️',`งาน Express ใช้เวลา ${day1(pStat.Express.lt)} วัน ไม่เร็วกว่างานปกติ (${day1(pStat.Normal.lt)} วัน) — ทบทวนการจัดคิว`,R));
+  if(pStat.Urgent.pctCnt+pStat.Express.pctCnt>35)
+    rec.push(li('🔥',`งานด่วนสูงถึง ${(pStat.Urgent.pctCnt+pStat.Express.pctCnt).toFixed(1)}% — ควรตั้งเพดานหรือคิดค่าบริการเพิ่ม`,R));
+  if(prevComps.size&&retentionRate<50) rec.push(li('🔁',`Retention เพียง ${retentionRate.toFixed(1)}% — ทำแคมเปญดึงลูกค้า ${churn} รายที่หายไปกลับมา`,R));
+  if(ltAll!=null&&ltP90>LT_WARN) rec.push(li('🐢',`P90 สูงถึง ${day1(ltP90)} วัน — ตรวจคอขวดที่ <b>${esc(ltArr[0]?ltArr[0][0]:'-')}</b>`,R));
+  if(newCumM[11]===0) rec.push(li('🌱',`ปี ${curY} ยังไม่มีลูกค้าใหม่ — เพิ่มกิจกรรมการตลาดเชิงรุก`,R));
+  else if(nrTotal&&newRevYTD/nrTotal<0.1) rec.push(li('🌱',`รายได้จากลูกค้าใหม่เพียง ${(newRevYTD/nrTotal*100).toFixed(1)}% — ควรตั้งเป้า 10-15%`,R));
+  if(conc3>50) rec.push(li('⚠️',`รายได้กระจุกที่ Top 3 ถึง <b>${conc3.toFixed(1)}%</b> — ควรขยายฐานลูกค้า`,R));
+  else rec.push(li('✅',`การกระจายฐานลูกค้าอยู่ในเกณฑ์ดี (Top 3 = ${conc3.toFixed(1)}%)`,R));
+  if(ncList.length) rec.push(li('🤝',`ติดตามลูกค้าใหม่ ${num(ncList.length)} ราย ให้กลับมาใช้บริการซ้ำภายใน 3 เดือน`,R));
+  setHtml('ulInsight',ins.join(''));
+  setHtml('ulRecom',rec.join(''));
+
+  setTxt('rowLabel',`Quotations ${num(MODEL.quotes.length)} · Detail ${num(MODEL.details.length)} · Company ${num(MODEL.companies.length)} · Date ${DATE_ORDER}`);
+  LAST={cur,rev,refY,refM,topComp,topTests,labArr,locArr,svcArr,nQuote,nSample,nTest,conc3,ltAll,ltMed,ltP90,ltArr,
+        completionRate,retentionRate,churnRate,qTotal,curY,timeline,dailyData,ma7,dailyCum};
+  LAST_EXT={qRows,stArr,doneRev,pipeRev,curY,ltMonth,newRevM,oldRevM,newRevYTD,oldRevYTD};
+  renderHealth();
+}
+
+/* ========== COMPANY DRILL-DOWN ========== */
+const compModal=$('compModal');
+let COMP_MODAL_NAME=null;
+function openCompModal(name,mode){
+  if(!MODEL) return;
+  mode=mode||'scope'; COMP_MODAL_NAME=name;
+  const sl=slice(STATE.year,STATE.months);
+  const yTxt=STATE.year==='ALL'?'ทุกปี':`ปี ${STATE.year}`;
+  const scopeShort=yTxt+(STATE.months.size?` · ${STATE.months.size} เดือนที่เลือก`:'');
+  let qs=sl.q.filter(q=>q.company===name).sort((a,b)=>b.date-a.date), fell=false;
+  if(mode==='scope'&&!qs.length){ mode='all'; fell=true; }
+  let ds;
+  if(mode==='all'){
+    qs=MODEL.quotes.filter(q=>q.company===name).sort((a,b)=>b.date-a.date);
+    const idsAll=new Set(qs.map(q=>q.requestId));
+    ds=MODEL.details.filter(d=>idsAll.has(d.requestId));
+  } else {
+    const ids0=new Set(qs.map(q=>q.requestId));
+    ds=sl.d.filter(d=>ids0.has(d.requestId));
+  }
+  if(!qs.length){ toast('ไม่พบข้อมูลของ '+name); return; }
+  const scopeLbl=mode==='all'?'ทุกปี':scopeShort;
+  const sel=$('mCompScope');
+  if(sel){ sel.options[0].text=`ตามตัวกรอง (${scopeShort})`; sel.value=mode; }
+  setTxt('mCompScopeNote',fell?`ไม่มีงานของลูกค้ารายนี้ใน${scopeShort} จึงแสดงทุกปีแทน`:'');
+  const total=sumRev(qs), lt=avgLead(qs), f=MODEL.firstSeen[name];
+  const tags=[];
+  if(isExcludedCustomer(name)) tags.push('อยู่ในรายชื่อยกเว้น');
+  if(LAST&&isNewCustomerYear(name,LAST.curY)) tags.push(`🌱 ลูกค้าใหม่ปี ${LAST.curY}`);
+  if(LAST_AT_RISK.some(x=>x.company===name)) tags.push('⚠️ เสี่ยงหาย');
+  setTxt('mCompName',name);
+  setTxt('mCompMeta',`ใช้บริการครั้งแรก ${thDate(f&&f.date)} · ล่าสุด ${thDate(MODEL.lastSeen[name])}${tags.length?' · '+tags.join(' · '):''}`);
+  setHtml('mCompStats',[
+    [`รายได้รวม (${scopeLbl})`,money(total)+' บ.','text-irpc-700 dark:text-sky-400'],
+    ['ใบเสนอราคา',num(cntQuote(qs))+' ใบ','text-sky-600'],
+    ['ตัวอย่าง',num(cntSample(ds))+' ตัวอย่าง','text-emerald-600'],
+    ['Lead Time เฉลี่ย',lt==null?'—':day1(lt)+' วัน','']
+  ].map(([l,v,c])=>`<div class="box text-center"><p class="lbl">${l}</p><p class="text-sm font-semibold ${c}" ${c?'':`style="color:${ltColor(lt)}"`}>${v}</p></div>`).join(''));
+
+  const tc={};
+  ds.forEach(d=>{ const k=d.paramDesc; tc[k]=tc[k]||new Set(); tc[k].add(tKey(d)); });
+  const topT=Object.entries(tc).map(([k,v])=>[k,v.size]).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  setHtml('mCompTests',topT.length?topT.map(([k,n])=>`<div class="flex justify-between gap-2 border-b border-slate-100 dark:border-slate-800 py-1"><span class="truncate" title="${esc(k)}">${esc(k)}</span><b class="shrink-0">${num(n)}</b></div>`).join('')
+    :'<p class="text-slate-400">ไม่มีข้อมูลรายการทดสอบ</p>');
+
+  const cc={}; qs.forEach(q=>cc[q.contactName]=(cc[q.contactName]||0)+q.revenue);
+  const topC=Object.entries(cc).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  const alias=[...new Set(qs.map(q=>q.companyRaw))].filter(x=>x!==name);
+  setHtml('mCompContacts',topC.map(([k,v])=>`<div class="flex justify-between gap-2 border-b border-slate-100 dark:border-slate-800 py-1"><span>👤 ${esc(k)}</span><b>${num(v)} บ.</b></div>`).join('')+
+    (alias.length?`<p class="sub-xs mt-1.5">↳ ชื่อพ้องที่รวม: ${esc(alias.join(' | '))}</p>`:''));
+
+  setHtml('mCompTable',qs.slice(0,15).map(q=>`
+    <tr class="border-b border-slate-100 dark:border-slate-800">
+      <td class="py-1.5 pl-3 font-medium text-irpc-600 dark:text-sky-400">${esc(q.qano)}</td>
+      <td class="py-1.5">${thDate(q.date)}</td>
+      <td class="py-1.5"><span class="chip text-[10px] px-1.5 py-0.5 rounded-full">${esc(q.status)}</span></td>
+      <td class="py-1.5">${esc(q.owner)}</td>
+      <td class="py-1.5">${esc(q.prio)}</td>
+      <td class="py-1.5">${esc(q.svc)}</td>
+      <td class="py-1.5 pr-3 text-right font-semibold">${money(q.revenue)}</td></tr>`).join(''));
+
+  setTxt('mCompQTitle',`ใบเสนอราคาล่าสุด (แสดง ${Math.min(15,qs.length)} จาก ${num(qs.length)} ใบ · ${scopeLbl})`);
+  compModal.classList.remove('hidden');
+  if(mode==='scope'&&STATE.year!=='ALL'){
+    const y=+STATE.year, byM=yy=>{const a=Array(12).fill(0);
+      MODEL.quotes.filter(q=>q.company===name&&q.y===yy&&passNonDate(q)).forEach(q=>{a[q.m-1]+=q.revenue;}); return a;};
+    const cy=byM(y), py=byM(y-1), hasM=STATE.months.size>0;
+    setTxt('mCompHistTitle',`รายได้รายเดือน ปี ${y} เทียบปี ${y-1}${hasM?' (เดือนที่เลือกเข้ม)':''}`);
+    drawChart('chCompHist',{type:'bar',
+      data:{labels:MONTH_TH,datasets:[
+        {label:`ปี ${y-1}`,data:py,backgroundColor:'#cbd5e1',borderRadius:4,maxBarThickness:16},
+        {label:`ปี ${y}`,data:cy,backgroundColor:cy.map((_,i)=>!hasM||STATE.months.has(i+1)?'#0072BC':'rgba(0,114,188,.3)'),borderRadius:4,maxBarThickness:16}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{position:'top',labels:{usePointStyle:true,boxWidth:7,font:{size:10}}},
+          tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${money(c.parsed.y)} บาท`}}},
+        scales:{x:{grid:{display:false},ticks:{font:{size:9.5}}},y:{beginAtZero:true,ticks:{callback:v=>num(v),font:{size:9},maxTicksLimit:5}}}}
+    });
+  } else {
+    setTxt('mCompHistTitle','รายได้รายเดือน (ทุกปี)');
+    const ym={}; qs.forEach(q=>{ const k=`${q.y}-${String(q.m).padStart(2,'0')}`; ym[k]=(ym[k]||0)+q.revenue; });
+    const keys=Object.keys(ym).sort();
+    let allKeys=[];
+    if(keys.length){
+      let [y,m]=keys[0].split('-').map(Number); const [ey,em]=keys[keys.length-1].split('-').map(Number);
+      while(y<ey||(y===ey&&m<=em)){ allKeys.push(`${y}-${String(m).padStart(2,'0')}`); m++; if(m>12){m=1;y++;} }
+    }
+    drawChart('chCompHist',{type:'bar',
+      data:{labels:allKeys.map(k=>{const [y,m]=k.split('-');return `${MONTH_TH[+m-1]}${y.slice(2)}`;}),
+        datasets:[{data:allKeys.map(k=>ym[k]||0),backgroundColor:'#0072BC',borderRadius:4,maxBarThickness:22}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:c=>`${money(c.parsed.y)} บาท`}}},
+        scales:{x:{grid:{display:false},ticks:{font:{size:9}}},y:{beginAtZero:true,ticks:{callback:v=>num(v),font:{size:9},maxTicksLimit:5}}}}
+    });
+  }
+}
+on('mCompScope','change',e=>{ if(COMP_MODAL_NAME) openCompModal(COMP_MODAL_NAME,e.target.value); });
+on('btnCloseCompModal','click',()=>compModal.classList.add('hidden'));
+compModal.addEventListener('click',e=>{ if(e.target===compModal) compModal.classList.add('hidden'); });
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape') return;
+  if(!compModal.classList.contains('hidden')){ compModal.classList.add('hidden'); return; }
+  $('exclModal').classList.add('hidden');
+});
+
+/* ========== HEALTH CHECK ========== */
+function renderHealth(){
+  const H=MODEL.health;
+  const total=MODEL.quotes.length||1;
+  const mgGroups=MODEL.nameMap.groups.filter(g=>g.members.length>1);
+  const fuzzyG=mgGroups.filter(g=>g.type==='fuzzy');
+  const issues=H.zeroPrice.length+H.badDate.length+H.priceConflict.length+H.noQano.length+
+    H.orphanDetail.length+H.future.length+H.old.length+(H.noSampleId?1:0)+(H.noCompany?1:0)+(H.noPrio.length?1:0)+(H.noOwner?1:0);
+  const row=(l,i,t,d)=>`<div class="hc-row ${l}"><span>${i}</span><span><b>${t}</b><br>${d}</span></div>`;
+  const out=[];
+  out.push(H.zeroPrice.length
+    ?row('hc-err','💸',`ใบเสนอราคาที่ราคาเป็น 0 : ${num(H.zeroPrice.length)} ใบ`,
+      `ตัวอย่าง: ${H.zeroPrice.slice(0,3).map(x=>esc(x.qano)).join(', ')}${H.zeroPrice.length>3?' …':''}`)
+    :row('hc-ok','✅','ราคาใบเสนอราคา','ทุกใบมีมูลค่ามากกว่า 0'));
+  out.push((H.badDate.length||H.future.length||H.old.length)
+    ?row('hc-warn','📅',`วันที่ผิดปกติ : ${num(H.badDate.length+H.future.length+H.old.length)} รายการ`,
+      `อ่านค่าไม่ได้ ${H.badDate.length} · อนาคต ${H.future.length} (ตัดออกจากการคำนวณ) · ก่อนปี 2020 ${H.old.length}`)
+    :row('hc-ok','✅','วันที่ (requestDate)',`อยู่ในช่วงปกติ · รูปแบบที่ตรวจพบ ${DATE_ORDER}`));
+  out.push(H.noCompany
+    ?row('hc-warn','🏢',`แถวที่ไม่มีชื่อลูกค้า : ${num(H.noCompany)} แถว`,'ระบบใช้ compName แทน — รหัสภายในอาจถูกนับเป็นลูกค้า')
+    :row('hc-ok','✅','ชื่อลูกค้า (u_company)','ทุกแถวมีชื่อลูกค้าครบ'));
+  out.push((H.qanoReuse.length||H.qanoBlank)
+    ?row('hc-warn','🔁',`เลขที่ใบเสนอราคาซ้ำ/เป็นค่าว่าง : ${num(H.qanoReuse.length)} แถวใช้เลขซ้ำข้ามลูกค้า/Lab/ปี · ${num(H.qanoBlank)} แถวเป็นค่าแทน (เช่น "-")`,
+      `ระบบแยกเป็นคนละใบแล้ว ไม่รวมยอดทิ้ง · ตัวอย่าง: ${[...new Set(H.qanoReuse.map(x=>x.qano))].slice(0,3).map(esc).join(', ')||'-'}`)
+    :row('hc-ok','✅','เลขที่ใบเสนอราคา (u_qano)','ไม่พบเลขซ้ำข้ามลูกค้า/Lab/ปี'));
+  out.push(H.noOwner
+    ?row('hc-warn','👷',`ไม่ระบุผู้รับผิดชอบ (requestBy) : ${num(H.noOwner)} ใบ`,'แสดงเป็น "ไม่ระบุ"')
+    :row('hc-ok','✅','ผู้รับผิดชอบ (requestBy)','ระบุครบทุกใบ'));
+  out.push(H.noPrio.length
+    ?row('hc-warn','🚦',`ไม่ระบุความเร่งด่วน : ${num(H.noPrio.length)} ใบ`,'ระบบนับเป็น Normal โดยอัตโนมัติ')
+    :row('hc-ok','✅','ความเร่งด่วน (sPriority)','ระบุครบทุกใบ'));
+  out.push(H.noComplete
+    ?row('hc-warn','⏱',`รายการที่ไม่มี completeDate : ${num(H.noComplete)} แถว`,'ไม่ถูกนำมาคำนวณ Lead Time')
+    :row('hc-ok','✅','completeDate','ครบทุกรายการ'));
+  out.push(mgGroups.length
+    ?row(fuzzyG.length?'hc-warn':'hc-ok','🔤',`รวมชื่อลูกค้า : ${num(mgGroups.length)} กลุ่ม`,
+      `ตรงกันแน่นอน ${num(mgGroups.length-fuzzyG.length)} · คล้ายกัน ${num(fuzzyG.length)} · ดูชีต "Company Merge Log"`)
+    :row('hc-ok','✅','การรวมชื่อลูกค้า','ไม่พบชื่อซ้ำ'));
+  out.push(H.priceConflict.length
+    ?row('hc-warn','⚖️',`ราคาขัดแย้งในใบเดียวกัน : ${num(H.priceConflict.length)} ใบ`,'ระบบใช้ราคาจาก recNo ต่ำสุด')
+    :row('hc-ok','✅','ราคาในแต่ละ recNo','สอดคล้องกัน'));
+  out.push((H.orphanDetail.length||H.noSampleId||H.noQano.length)
+    ?row('hc-warn','🔗','ความเชื่อมโยง Main ↔ Detail',
+      `Detail ไม่พบใน Main ${num(H.orphanDetail.length)} · ไม่มี sampleId ${num(H.noSampleId)} · ไม่มี u_qano ${num(H.noQano.length)}`)
+    :row('hc-ok','✅','ความเชื่อมโยง Main ↔ Detail','จับคู่ด้วย requestId ได้ครบถ้วน'));
+  setHtml('hcList',out.join(''));
+
+  const score=Math.max(0,100-Math.round(
+    (H.zeroPrice.length*2+H.badDate.length*3+H.future.length*3+H.priceConflict.length*1.5+
+     H.noQano.length*2+H.noCompany*1.5+fuzzyG.length+H.orphanDetail.length*0.5)/total*100));
+  setTxt('hcScore',`คะแนนคุณภาพข้อมูล ${score}/100`);
+  setCls('hcScore','text-[11px] font-bold px-3 py-1 rounded-lg '+
+    (score>=90?'bg-emerald-50 text-emerald-600':score>=70?'bg-amber-50 text-amber-600':'bg-rose-50 text-rose-600'));
+  setHtml('hcDetail',issues===0
+    ?`<div class="hc-row hc-ok mt-1"><span>🎉</span><span>ไม่พบปัญหาในข้อมูลต้นทาง — พร้อมนำเสนอผู้บริหาร</span></div>`
+    :`<div class="text-[11px] text-slate-400 mt-1">พบรายการที่ควรตรวจสอบรวม <b class="text-slate-600 dark:text-slate-300">${num(issues)}</b> จุด</div>`);
+}
+
+/* ========== EXCLUDE MODAL ========== */
+const exclModal=$('exclModal');
+on('btnExclModal','click',()=>{ exclModal.classList.remove('hidden'); renderExclTags(); });
+on('btnCloseModal','click',()=>exclModal.classList.add('hidden'));
+on('btnSaveExcl','click',()=>{ exclModal.classList.add('hidden'); rebuild(); toast('บันทึกรายชื่อยกเว้นแล้ว'); });
+on('btnExclReset','click',()=>{ MANUAL_OLD_CUSTOMERS=DEFAULT_EXCL.slice(); updateOldSet(); renderExclTags(); });
+exclModal.addEventListener('click',e=>{ if(e.target===exclModal) exclModal.classList.add('hidden'); });
+function renderExclTags(){
+  const box=$('exclTags'); if(!box) return;
+  box.innerHTML=MANUAL_OLD_CUSTOMERS.length?MANUAL_OLD_CUSTOMERS.map((c,i)=>`
+    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-[11.5px]">
+      ${esc(c)}<button type="button" data-i="${i}" class="ex-del text-rose-500 hover:text-rose-700 font-bold ml-1">×</button>
+    </span>`).join(''):`<span class="text-[11.5px] text-slate-400">ยังไม่มีรายชื่อยกเว้น</span>`;
+  box.querySelectorAll('.ex-del').forEach(b=>{
+    b.onclick=e=>{ e.stopPropagation(); MANUAL_OLD_CUSTOMERS.splice(+b.dataset.i,1); updateOldSet(); renderExclTags(); };
+  });
+}
+on('btnAddExcl','click',()=>{
+  const inp=$('inExclName'), val=inp.value.trim();
+  if(val&&!MANUAL_OLD_CUSTOMERS.some(x=>x.toLowerCase()===val.toLowerCase())){
+    MANUAL_OLD_CUSTOMERS.push(val); updateOldSet(); inp.value=''; renderExclTags();
+  }
+});
+on('inExclName','keydown',e=>{ if(e.key==='Enter') $('btnAddExcl').click(); });
+
+/* ========== THEME ========== */
+const btnTheme=$('btnTheme');
+function setTheme(isDark){
+  document.documentElement.classList.toggle('dark',isDark);
+  try{ localStorage.setItem('irpc_theme',isDark?'dark':'light'); }catch(e){}
+  btnTheme.textContent=isDark?'☀️':'🌙';
+}
+btnTheme.onclick=()=>{ setTheme(!document.documentElement.classList.contains('dark')); if(MODEL) render(); };
+(function(){
+  let t=null; try{ t=localStorage.getItem('irpc_theme'); }catch(e){}
+  setTheme(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches));
+})();
+
+/* ========== SMART FILE READER ========== */
+const HEAD_KEYS=['u_qano','qano','requestid','request_id','sampleid','sample_id','quantation','u_company','paramlistid','requestdate'];
+function readSheetSmart(ws){
+  const aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,blankrows:false});
+  if(!aoa.length) return [];
+  let hi=0,best=-1;
+  for(let i=0;i<Math.min(aoa.length,25);i++){
+    const row=(aoa[i]||[]).map(x=>String(x??'').trim().toLowerCase().replace(/\s+/g,''));
+    const score=row.filter(c=>HEAD_KEYS.includes(c)).length;
+    if(score>best){ best=score; hi=i; }
+  }
+  if(best<=0) hi=0;
+  return XLSX.utils.sheet_to_json(ws,{range:hi,defval:null});
+}
+const colsOf=rows=>rows.length?Object.keys(rows[0]).map(k=>String(k).trim().toLowerCase().replace(/\s+/g,'')):[];
+const hasAny=(cols,list)=>list.some(k=>cols.includes(k));
+
+on('fileInput','change',async e=>{
+  const files=Array.from(e.target.files||[]);
+  if(!files.length) return;
+  const sheets=[];
+  try{
+    let cm=[],cd=[];
+    for(const f of files){
+      const buf=await f.arrayBuffer();
+      const wb=XLSX.read(new Uint8Array(buf),{type:'array',cellDates:true});
+      wb.SheetNames.forEach(sn=>{
+        const rows=readSheetSmart(wb.Sheets[sn]);
+        if(!rows.length) return;
+        const cols=colsOf(rows);
+        sheets.push(`${f.name}›${sn}(${rows.length})`);
+        const isDetail=hasAny(cols,A.sampleId)||hasAny(cols,A.paramId);
+        const isMain=hasAny(cols,A.qano)||(hasAny(cols,A.reqId)&&hasAny(cols,A.price));
+        if(isDetail) cd.push(...rows); else if(isMain) cm.push(...rows);
+      });
+    }
+    if(!cm.length) throw new Error('ไม่พบชีตใบเสนอราคา (ต้องมีคอลัมน์ u_qano หรือ requestId + quantation)\nชีตที่อ่านได้: '+(sheets.join(', ')||'(ไม่มี)'));
+
+    const seen=new Set(), mainU=[];
+    cm.forEach(r=>{
+      const o={}; for(const k in r) o[String(k).trim().toLowerCase()]=r[k];
+      const k=[G(o,...A.qano),G(o,...A.reqId),G(o,...A.recNo),G(o,...A.price)].join('|');
+      if(seen.has(k)) return; seen.add(k); mainU.push(r);
+    });
+    const seenD=new Set(), detU=[];
+    cd.forEach(r=>{
+      const o={}; for(const k in r) o[String(k).trim().toLowerCase()]=r[k];
+      const k=[G(o,...A.reqId),G(o,...A.sampleId),G(o,...A.paramId),G(o,...A.variantId)].join('|');
+      if(seenD.has(k)) return; seenD.add(k); detU.push(r);
+    });
+
+    RAW={main:mainU,detail:detU};
+    MODEL=buildModel(RAW);
+    STATE.year=null;STATE.months.clear();STATE.comp.clear();STATE.req.clear();STATE.samp.clear();STATE.lab.clear();
+    STATE.ncMonth='ALL';
+    refreshFilters(); render();
+    setTxt('srcLabel',`แหล่งข้อมูล: ${files.length} ไฟล์ · Main ${num(mainU.length)} แถว · Detail ${num(detU.length)} แถว`);
+    toast(`อ่านสำเร็จ ${files.length} ไฟล์ · Main ${num(mainU.length)} / Detail ${num(detU.length)} แถว`+(detU.length?'':' (ไม่พบชีต Detail)'),4000);
+  }catch(err){
+    console.error(err);
+    alert('อ่านไฟล์ไม่สำเร็จ: '+err.message);
+  }finally{ e.target.value=''; }
+});
+
+/* ========== EXPORT ========== */
+function stamp(){const d=new Date();return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;}
+const SH=(wb,name,rows)=>XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{ผลตรวจ:'ไม่มีข้อมูล'}]),name.slice(0,31));
+const r2=v=>+(+v||0).toFixed(2);
+
+on('btnXlsx','click',()=>{
+  if(!LAST){ toast('ยังไม่มีข้อมูล'); return; }
+  const L=LAST,E=LAST_EXT,NC=LAST_NC,P=LAST_PRIO,AR=LAST_AT_RISK,wb=XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([
+    ['IRPC Testing Services: Outside Revenue Performance — Export v3.25'],
+    ['วันที่ส่งออก',new Date().toLocaleString('th-TH')],
+    ['ขอบเขต',scopeText()],
+    ['รวมชื่อลูกค้าอัตโนมัติ',STATE.autoClean?'เปิด':'ปิด'],
+    ['รวมชื่อที่คล้ายกัน',STATE.fuzzy?`เปิด (${(STATE.fuzzyTh*100).toFixed(0)}%)`:'ปิด'],
+    ['ยกเว้นรายชื่อลูกค้าใหม่',STATE.exclInternal?'เปิด':'ปิด'],
+    ['รายชื่อที่ยกเว้น',MANUAL_OLD_CUSTOMERS.join(' | ')],
+    ['โหมดรายได้ลูกค้าใหม่',STATE.ncMode==='cohort'?'Cohort (เฉพาะเดือนที่ได้มา)':'ทุกเดือนของลูกค้าใหม่'],
+    [],
+    ['สรุปผล'],
+    ['รายได้รวม (บาท)',r2(L.rev)],['จำนวนใบเสนอราคา',L.nQuote],['จำนวนตัวอย่าง',L.nSample],['จำนวนรายการทดสอบ',L.nTest],
+    ['อัตราปิดงาน (Completion Rate %)',r2(L.completionRate)],
+    ['Retention Rate (%)',r2(L.retentionRate)],['Churn Rate (%)',r2(L.churnRate)],
+    ['การกระจุกตัว Top 3 (%)',r2(L.conc3)],
+    ['Lead Time เฉลี่ย (วัน)',L.ltAll==null?'':r2(L.ltAll)],
+    ['Lead Time Median (วัน)',L.ltMed==null?'':r2(L.ltMed)],
+    ['Lead Time P90 (วัน)',L.ltP90==null?'':r2(L.ltP90)],
+    [],
+    ['ความเร่งด่วน'],['ใบทั้งหมด',L.qTotal],
+    ['Normal (ใบ / %)',P.Normal.cnt,r2(P.Normal.pctCnt)],
+    ['Urgent (ใบ / %)',P.Urgent.cnt,r2(P.Urgent.pctCnt)],
+    ['Express (ใบ / %)',P.Express.cnt,r2(P.Express.pctCnt)],
+    [],
+    ['ลูกค้าเสี่ยงหาย'],
+    ['ลูกค้าเสี่ยงหาย (ราย)',AR.length],['รายได้ปีก่อนของกลุ่มเสี่ยง (บาท)',r2(AR.reduce((s,x)=>s+x.rev,0))],
+    [],
+    ['ลูกค้าใหม่'],
+    ['จำนวนสะสมทั้งปี',NC.newCumM[11]],
+    ['รายได้จากลูกค้าใหม่',r2(E.newRevYTD)],['รายได้จากลูกค้าเดิม',r2(E.oldRevYTD)],
+    [],
+    ['Forecast'],['YTD',r2(FC.ytd)],['เฉลี่ย/เดือน',r2(FC.avg)],['เดือนที่เหลือ',FC.left],
+    ['คาดการณ์สิ้นปี',r2(FC.proj)],['ระดับที่คาดว่าจะได้',kpiLevelYear(FC.proj)]
+  ]),'Summary');
+
+  if(LAST_BRIDGE){const Bg=LAST_BRIDGE; const rows=[{ที่มา:`ยอดปี ${Bg.prevY}`,'จำนวนราย':'','ผลต่าง (บาท)':'',ยอดรวม:r2(Bg.tPrev)}];
+    Bg.META.forEach(m=>rows.push({ที่มา:m.label,'จำนวนราย':m.arr.length,'ผลต่าง (บาท)':r2(m.sum),ยอดรวม:''}));
+    rows.push({ที่มา:`ยอดปี ${Bg.curY}`,'จำนวนราย':'','ผลต่าง (บาท)':'',ยอดรวม:r2(Bg.tCur)},{ที่มา:`ช่วงเวลา: ${Bg.basis}`});
+    SH(wb,'Revenue Bridge',rows);
+    SH(wb,'Bridge Detail',Bg.META.flatMap(m=>m.arr.map(x=>({ที่มา:m.label,ลูกค้า:x.c,[`ปี ${Bg.prevY}`]:r2(x.prev),[`ปี ${Bg.curY}`]:r2(x.cur),ผลต่าง:r2(x.d)}))));}
+  if(LAST_DECL){const D=LAST_DECL;
+    SH(wb,'Declining Customers',D.rows.length?D.rows.map((x,i)=>({อันดับ:i+1,ลูกค้า:x.c,[`ปี ${D.prevY}`]:r2(x.prev),[`ปี ${D.curY}`]:r2(x.cur),
+      ผลต่าง:r2(x.d),'ลดลง %':r2(-x.d/x.prev*100),[`ใบ ${D.prevY}`]:x.qp,[`ใบ ${D.curY}`]:x.qc})):[{ผลตรวจ:`ไม่มี (เกณฑ์ ≥${D.thr}% ช่วง ${D.basis})`}]);}
+  if(LAST_SVC_YOY){const Y=LAST_SVC_YOY;
+    SH(wb,'Service Group YoY',[...Y.rows.map(r=>({กลุ่มบริการ:r.n,[`ปี ${Y.prevY}`]:r2(r.prev),[`ปี ${Y.curY}`]:r2(r.cur),
+      ผลต่าง:r2(r.cur-r.prev),'YoY %':r.prev>0?r2((r.cur-r.prev)/r.prev*100):'ใหม่'})),
+      {กลุ่มบริการ:`หน่วย: ${Y.unit} · ช่วง: ${Y.basis}`}]);}
+  SH(wb,'At-Risk Customers',AR.map((x,i)=>({อันดับ:i+1,บริษัท:x.company,[`รายได้ปี ${L.curY-1}`]:r2(x.rev),
+    'จำนวนใบ':x.cnt,'สั่งล่าสุด':x.last?x.last.toLocaleDateString('th-TH'):''})));
+  SH(wb,'Priority Breakdown',['Normal','Urgent','Express'].map(k=>({ระดับ:k,จำนวนใบ:P[k].cnt,'% ของใบ':r2(P[k].pctCnt),
+    รายได้:r2(P[k].rev),'% ของรายได้':r2(P[k].pctRev),'Lead Time (วัน)':P[k].lt==null?'':r2(P[k].lt)})));
+  SH(wb,'Daily Revenue',L.timeline.map((t,i)=>({วันที่:t.ds,'รายได้':r2(L.dailyData[i]),'ค่าเฉลี่ย 7 วัน':r2(L.ma7[i]),
+    'ยอดสะสม':r2(L.dailyCum[i]),'เสาร์-อาทิตย์':t.wk?'ใช่':''})));
+  SH(wb,'Company Merge Log',MODEL.nameMap.groups.filter(g=>g.members.length>1).map((g,i)=>({
+    ลำดับ:i+1,ชื่อหลัก:g.canonical,'จำนวนชื่อที่รวม':g.members.length,
+    'ชื่อที่รวมเข้ามา':g.members.filter(m=>m!==g.canonical).join(' | '),
+    ประเภท:g.type==='fuzzy'?'คล้ายกัน (ควรตรวจ)':g.type==='manual'?'กำหนดเอง':'ตรงกันแน่นอน',
+    รหัสเทียบ:nameKey(g.canonical),ใบเสนอราคารวม:g.n||0,รายได้รวม:r2(g.rev)})));
+  SH(wb,'Company Name Map',Object.entries(MODEL.nameMap.map).map(([o,c])=>({
+    'ชื่อในไฟล์ต้นทาง':o,'ชื่อหลังรวม':c,'ถูกรวม':o===c?'ไม่':'ใช่',
+    'ยกเว้นลูกค้าใหม่':isExcludedCustomer(c)?'ใช่':'ไม่',รหัสเทียบ:nameKey(o),
+    'จำนวนใบ':MODEL.rawStats[o]?MODEL.rawStats[o].n:0,'รายได้':MODEL.rawStats[o]?r2(MODEL.rawStats[o].rev):0
+  })).sort((a,b)=>String(a['ชื่อหลังรวม']).localeCompare(String(b['ชื่อหลังรวม']),'th')));
+  SH(wb,'New Customers',NC.ncList.map((x,i)=>({อันดับ:i+1,ชื่อลูกค้า:x.comp,'ชื่อพ้องที่รวม':x.alias.join(' | ')||'—',
+    'เดือนแรกที่ใช้บริการ':`${MONTH_TH[x.m-1]} ${NC.curY}`,กลุ่มบริการแรก:x.svc,ใบเสนอราคา:x.q,ตัวอย่าง:x.s,'รายได้ปีแรก':r2(x.rev)})));
+  SH(wb,'New Customer by Month',MONTH_TH.map((m,i)=>({เดือน:m,ปี:NC.curY,'ลูกค้าใหม่ (ราย)':NC.newCntM[i],'สะสม (ราย)':NC.newCumM[i],
+    'รายชื่อ':NC.newByMonth[i].join(' | ')||'—','รายได้ลูกค้าใหม่':r2(NC.newRevM[i]),'รายได้ลูกค้าเดิม':r2(NC.oldRevM[i])})));
+  SH(wb,'Lead Time',[
+    ...MONTH_TH.map((m,i)=>({มิติ:'รายเดือน',ชื่อ:`${m} ${E.curY}`,'เฉลี่ย (วัน)':E.ltMonth[i]==null?'':r2(E.ltMonth[i])})),
+    ...L.ltArr.map(x=>({มิติ:STATE.ltDim==='loc'?'Lab Location':STATE.ltDim==='svc'?'กลุ่มบริการ':'ส่วน (Lab)',
+      ชื่อ:x[0],'เฉลี่ย (วัน)':r2(x[1]),'P90 (วัน)':x[3]==null?'':r2(x[3]),'จำนวนรายการ':x[2]}))]);
+  SH(wb,'Contact Performance',(LAST_CT||[]).map((x,i)=>({อันดับ:i+1,ผู้ติดต่อ:x[0],ใบเสนอราคา:x[2],ลูกค้าที่ดูแล:x[3],รายได้รวม:r2(x[1])})));
+  SH(wb,'Quarterly',E.qRows.map(r=>({ไตรมาส:`${r.q}/${E.curY}`,รายได้:r2(r.rev),ลูกค้าใหม่:r.nc,ตัวอย่าง:r.samp,
+    'เป้า L3':KPI_Q_L3,'% ของเป้า':r2(r.pct),ระดับ:r.lv})));
+  SH(wb,'Pipeline',E.stArr.map(([k,v])=>({สถานะ:k,รายได้:r2(v),สัดส่วน:L.rev?r2(v/L.rev*100):0,
+    ประเภท:DONE_STATUS.includes(k.toLowerCase())?'ปิดงานแล้ว':'ระหว่างดำเนินการ'})));
+  SH(wb,'By Company',L.topComp.map((x,i)=>({อันดับ:i+1,บริษัท:x[0],'ลูกค้าใหม่':isNewCustomerYear(x[0],E.curY)?'ใช่':'ไม่',
+    รายได้:r2(x[1]),สัดส่วน:L.rev?r2(x[1]/L.rev*100):0})));
+  SH(wb,'Top Tests',L.topTests.map(([k,v],i)=>({อันดับ:i+1,รายการทดสอบ:k,กลุ่มบริการ:v.svc,ตัวอย่าง:v.s.size,ทดสอบ:v.t.size,
+    'Lead Time (วัน)':v.lt.length?r2(v.lt.reduce((a,b)=>a+b,0)/v.lt.length):'',รายได้ปันส่วน:r2(v.rev),
+    '% ของรายได้รวม':L.rev?r2(v.rev/L.rev*100):0,'% สะสม':L.rev?r2((v._cum||0)/L.rev*100):0})));
+  if(LAST_TM){
+    const T=LAST_TM,head=T.dim==='svc'?'กลุ่มบริการ':'รายการทดสอบ';
+    const mk=(n,a)=>{const o={};o[head]=n;MONTH_TH.forEach((m,i)=>o[m]=r2(a[i]));o['รวม']=r2(a.reduce((x,y)=>x+y,0));return o;};
+    const rows=T.topG.map(p=>mk(p,T.byGrpMonth[p]));
+    if(T.restG.length) rows.push(mk(`(อื่นๆ ${T.restG.length} รายการ)`,T.otherArr));
+    rows.push(mk('รวมทั้งหมด',T.monthTotal));
+    SH(wb,T.metric==='rev'?'Revenue by Month':'Count by Month',rows);
+  }
+  SH(wb,'Breakdown',[
+    ...L.labArr.map(x=>({มิติ:'Lab (ตัวอย่าง)',ชื่อ:x[0],ค่า:x[1]})),
+    ...L.locArr.map(x=>({มิติ:'Lab Location (ตัวอย่าง)',ชื่อ:x[0],ค่า:x[1]})),
+    ...L.svcArr.map(x=>({มิติ:'Service Group (รายได้)',ชื่อ:x[0],ค่า:r2(x[1])}))]);
+  SH(wb,'Quotations',L.cur.q.map(q=>({u_qano:q.qano,requestId:q.requestId,requestStatus:q.status,
+    requestDate:q.date.toLocaleDateString('th-TH'),ปี:q.y,เดือน:MONTH_TH[q.m-1],
+    'บริษัท (รวมแล้ว)':q.company,'บริษัท (ต้นฉบับ)':q.companyRaw,'ลูกค้าใหม่':isNewCustomerYear(q.company,q.y)?'ใช่':'ไม่',
+    requestBy:q.owner,contactName:q.contactName,'sPriority (ดิบ)':q.sPriority,'ระดับความเร่งด่วน':q.prio,
+    serviceGroup:q.svc,lab:q.lab,labLocation:q.loc,'Lead Time (วัน)':q.leadTime==null?'':r2(q.leadTime),quantation:q.revenue})));
+  SH(wb,'Details',L.cur.d.map(d=>({requestId:d.requestId,sampleId:d.sampleId,sampleDesc:d.sampleDesc,variantId:d.variantId,
+    paramListId:d.paramListId,paramListDesc:d.paramDesc,sampleStatus:d.sampleStatus,lab:d.lab,forLab:d.loc,serviceGroup:d.svc,
+    'Lead Time (วัน)':d.leadTime==null?'':r2(d.leadTime)})));
+
+  XLSX.writeFile(wb,`IRPC_Testing_Revenue_${stamp()}.xlsx`);
+  toast(`ส่งออก Excel เรียบร้อย (${wb.SheetNames.length} ชีต)`);
+});
+
+on('btnHcExport','click',()=>{
+  if(!MODEL) return;
+  const H=MODEL.health,wb=XLSX.utils.book_new();
+  SH(wb,'ราคาเป็น 0',H.zeroPrice.length?H.zeroPrice:[{ผลตรวจ:'ไม่มีปัญหา'}],'Zero Price');
+  SH(wb,'วันที่ผิดปกติ',[
+    ...H.badDate.map(x=>({ประเภท:'อ่านค่าไม่ได้',u_qano:x.qano,'ค่าที่พบ':x.raw})),
+    ...H.future.map(x=>({ประเภท:'วันที่อนาคต (ตัดออก)',u_qano:x.qano,'ค่าที่พบ':x.d.toLocaleDateString('th-TH'),บริษัท:x.company,มูลค่า:x.rev})),
+    ...H.old.map(x=>({ประเภท:'เก่ากว่าปี 2020',u_qano:x.qano,'ค่าที่พบ':x.d.toLocaleDateString('th-TH')}))]);
+  SH(wb,'ไม่ระบุความเร่งด่วน',H.noPrio.length?H.noPrio:[{ผลตรวจ:'ระบุครบ'}]);
+  SH(wb,'ไม่ระบุผู้รับผิดชอบ',MODEL.quotes.filter(q=>q.owner==='ไม่ระบุ').map(q=>({u_qano:q.qano,บริษัท:q.company,สถานะ:q.status})));
+  SH(wb,'ราคาขัดแย้ง',H.priceConflict.length?H.priceConflict:[{ผลตรวจ:'ไม่พบความขัดแย้ง'}]);
+  SH(wb,'ชื่อที่ถูกรวม',MODEL.nameMap.groups.filter(g=>g.members.length>1).map(g=>({
+    ชื่อหลัก:g.canonical,'ชื่อที่รวมเข้ามา':g.members.filter(m=>m!==g.canonical).join(' | '),
+    ประเภท:g.type==='fuzzy'?'คล้ายกัน (ควรตรวจ)':g.type==='manual'?'กำหนดเอง':'ตรงกันแน่นอน'})));
+  SH(wb,'รายชื่อยกเว้นลูกค้าใหม่',MODEL.excludedFound.length?MODEL.excludedFound.map(c=>({ชื่อ:c,
+    'ปีแรกที่พบ':MODEL.firstSeen[c]?MODEL.firstSeen[c].y:'','เดือนแรกที่พบ':MODEL.firstSeen[c]?MONTH_TH[MODEL.firstSeen[c].m-1]:''})):[{ผลตรวจ:'ไม่มี'}]);
+  SH(wb,'ไม่มี u_qano',H.noQano.length?H.noQano.map(x=>({requestId:x})):[{ผลตรวจ:'มีครบ'}]);
+  SH(wb,'Detail ไม่พบใน Main',H.orphanDetail.length?H.orphanDetail.map(x=>({requestId:x})):[{ผลตรวจ:'ครบถ้วน'}]);
+  XLSX.writeFile(wb,`IRPC_Testing_DataIssues_${stamp()}.xlsx`);
+  toast('ส่งออกรายการที่ต้องแก้เรียบร้อย');
+});
+
+on('btnPng','click',async()=>{
+  const b=$('btnPng'),o=b.textContent; b.textContent='⏳ กำลังสร้าง...';
+  try{
+    $('printChips').classList.remove('hidden');
+    const c=await html2canvas($('dashRoot'),{scale:2,backgroundColor:document.documentElement.classList.contains('dark')?'#0f172a':'#f4faff',useCORS:true,windowWidth:1500});
+    const a=document.createElement('a'); a.download=`IRPC_Testing_Dashboard_${stamp()}.png`; a.href=c.toDataURL('image/png'); a.click();
+  }catch(e){ alert('สร้างภาพไม่สำเร็จ: '+e.message); }
+  finally{ $('printChips').classList.add('hidden'); b.textContent=o; }
+});
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+let PRINT_RESTORE=null;
+async function toLightForExport(){
+  const wasDark=document.documentElement.classList.contains('dark');
+  if(wasDark){ setTheme(false); if(MODEL) render(); await wait(450); }
+  return ()=>{ if(wasDark){ setTheme(true); if(MODEL) render(); } };
+}
+function printMetaText(){
+  const d=new Date().toLocaleString('th-TH',{dateStyle:'long',timeStyle:'short'});
+  return `จัดทำเมื่อ ${d} · ข้อมูล ${MODEL?num(MODEL.quotes.length):0} ใบเสนอราคา / ${MODEL?num(MODEL.details.length):0} รายการตัวอย่าง`;
+}
+on('btnPdf','click',async()=>{
+  if(!MODEL){ toast('ยังไม่มีข้อมูลให้ส่งออก'); return; }
+  PRINT_RESTORE=await toLightForExport();
+  setTxt('printMeta',printMetaText());
+  $('printChips').classList.remove('hidden');
+  await wait(300);
+  if(window.Chart) Object.values(Chart.instances).forEach(c=>c.resize());
+  toast('เลือก "บันทึกเป็น PDF" · ขนาด A4 แนวนอน · เปิด Background graphics');
+  await wait(600);
+  window.print();
+});
+window.addEventListener('beforeprint',()=>{ document.querySelectorAll('details').forEach(d=>{d.dataset.wasOpen=d.open?'1':'0'; d.open=true;}); if(window.Chart) Object.values(Chart.instances).forEach(c=>c.resize()); });
+window.addEventListener('afterprint',()=>{
+  document.querySelectorAll('details').forEach(d=>{ if(d.dataset.wasOpen==='0') d.open=false; });
+  $('printChips').classList.add('hidden');
+  if(PRINT_RESTORE){ PRINT_RESTORE(); PRINT_RESTORE=null; }
+  if(window.Chart) Object.values(Chart.instances).forEach(c=>c.resize());
+});
+
+/* ----- Snapshot: ไฟล์ HTML อ่านอย่างเดียว เปิดได้ทุกเครื่อง ไม่ต้องโหลด Excel ----- */
+on('btnShare','click',async()=>{
+  if(!MODEL){ toast('ยังไม่มีข้อมูลให้ส่งออก'); return; }
+  const b=$('btnShare'),o=b.textContent; b.textContent='⏳ กำลังสร้าง...';
+  const restore=await toLightForExport();
+  try{
+    setTxt('printMeta',printMetaText());
+    $('printChips').classList.remove('hidden');
+    await wait(250);
+    const clone=document.documentElement.cloneNode(true);
+    const src=[...document.querySelectorAll('canvas')], dst=[...clone.querySelectorAll('canvas')];
+    src.forEach((c,i)=>{ if(!dst[i]) return;
+      const img=document.createElement('img'); img.src=c.toDataURL('image/png');
+      img.setAttribute('style','width:100%;height:100%;object-fit:contain;display:block'); dst[i].replaceWith(img); });
+    clone.querySelectorAll('script,.no-print,.modal,#toast').forEach(e=>e.remove());
+    clone.querySelectorAll('[onclick]').forEach(e=>{e.removeAttribute('onclick');e.style.cursor='default';});
+    clone.classList.remove('dark');
+    clone.querySelectorAll('details').forEach(d=>d.setAttribute('open',''));
+    const meta=clone.querySelector('#printMeta'); if(meta){ meta.classList.remove('print-only'); meta.style.cssText='font-size:12px;color:#475569;margin:2px 0 8px'; }
+    const chips=clone.querySelector('#printChips'); if(chips) chips.classList.remove('hidden');
+    const st=document.createElement('style');
+    st.textContent='header.hd,.sticky{position:static!important}.tbl-list,.tbl-scroll,.tbl-half{max-height:none!important}'
+      +'.print-only{display:block!important}body{background:#f4faff}';
+    clone.querySelector('head').appendChild(st);
+    const note=document.createElement('div');
+    note.setAttribute('style','background:#fff7ed;color:#9a3412;border-bottom:1px solid #fed7aa;padding:8px 16px;font-size:12px;text-align:center');
+    note.textContent='รายงานสรุป ณ เวลาที่บันทึก (อ่านอย่างเดียว) · ข้อมูลลูกค้าและรายได้เป็นความลับ โปรดส่งต่อเฉพาะผู้ที่เกี่ยวข้อง';
+    clone.querySelector('body').insertBefore(note,clone.querySelector('body').firstChild);
+    const html='<!DOCTYPE html>\n'+clone.outerHTML;
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
+    a.download=`IRPC_Outside_Revenue_Report_${stamp()}.html`; a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    toast('บันทึกไฟล์รายงานเรียบร้อย · ส่งต่อให้ผู้อื่นเปิดดูได้ทันที');
+  }catch(e){ alert('สร้างไฟล์ไม่สำเร็จ: '+e.message); }
+  finally{ $('printChips').classList.add('hidden'); restore(); b.textContent=o; }
+});
+
+/* ========== EVENTS ========== */
+function rebuild(){ MODEL=buildModel(RAW); STATE.comp.clear(); refreshFilters(); render(); }
+on('fAutoClean','change',e=>{STATE.autoClean=e.target.checked;rebuild();});
+on('fFuzzy','change',e=>{STATE.fuzzy=e.target.checked;rebuild();});
+on('fFuzzyLv','change',e=>{STATE.fuzzyTh=+e.target.value;if(STATE.fuzzy)rebuild();});
+on('fExclInternal','change',e=>{STATE.exclInternal=e.target.checked;render();});
+on('btnReset','click',()=>{
+  STATE.months.clear();STATE.comp.clear();STATE.req.clear();STATE.samp.clear();STATE.lab.clear();
+  STATE.year=MODEL.years[0]??'ALL';STATE.ncMonth='ALL';refreshFilters();render();});
+on('fMetric','change',e=>{STATE.metric=e.target.value;render();});
+on('fDim','change',e=>{STATE.dim=e.target.value;render();});
+on('fTopN','change',e=>{STATE.topN=+e.target.value;render();});
+on('fStack','change',e=>{STATE.stacked=e.target.value==='1';render();});
+on('fHideOther','change',e=>{STATE.hideOther=e.target.checked;render();});
+on('fLtDim','change',e=>{STATE.ltDim=e.target.value;render();});
+on('fNcMonth','change',e=>{STATE.ncMonth=e.target.value;render();});
+on('fSvcYoyMetric','change',()=>render());
+on('btnTopTestsXlsx','click',()=>{
+  if(!LAST||!LAST.topTests||!LAST.topTests.length){ toast('ยังไม่มีข้อมูลให้ส่งออก'); return; }
+  try{
+    const L=LAST,wb=XLSX.utils.book_new();
+    SH(wb,`Top ${L.topTests.length} Tests`,L.topTests.map(([k,v],i)=>({
+      อันดับ:i+1,รายการทดสอบ:k,กลุ่มบริการ:v.svc,ตัวอย่าง:v.s.size,ทดสอบ:v.t.size,
+      'Lead Time เฉลี่ย (วัน)':v.lt.length?r2(v.lt.reduce((a,b)=>a+b,0)/v.lt.length):'',
+      'รายได้ปันส่วน (บาท)':r2(v.rev),'% ของรายได้รวม':L.rev?r2(v.rev/L.rev*100):0,'% สะสม':L.rev?r2((v._cum||0)/L.rev*100):0})));
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([
+      ['รายการทดสอบที่สร้างรายได้สูงสุด (Top '+L.topTests.length+')'],
+      ['วันที่ส่งออก',new Date().toLocaleString('th-TH')],
+      ['ขอบเขต',scopeText()],
+      ['รายได้รวมในขอบเขต (บาท)',r2(L.rev)],
+      ['วิธีคำนวณ','รายได้ใบเสนอราคา ÷ จำนวนรายการทดสอบ (distinct) ในใบนั้น แล้วรวมตามรายการทดสอบ'],
+      ['ข้อยกเว้น','ไม่รวมตัวอย่างสถานะ Initial / Cancelled · ไม่รวมใบสถานะ Created / Cancelled / Reject'],
+      ['Lead Time','วันที่เสร็จ − วันที่รับคำขอ เฉลี่ยต่อรายการทดสอบ']]),'เงื่อนไข');
+    XLSX.writeFile(wb,`IRPC_Top${L.topTests.length}_Tests_${stamp()}.xlsx`);
+  }catch(e){ alert('ส่งออกไม่สำเร็จ: '+e.message); }
+});
+on('fDeclPct','change',()=>render());
+on('fDeclMin','change',()=>render());
+on('fNcMode','change',e=>{STATE.ncMode=e.target.value;render();});
+
+/* ========== INIT ========== */
+MODEL=buildModel(RAW);
+refreshFilters();
+render();
+</script>
+</body>
+</html>
