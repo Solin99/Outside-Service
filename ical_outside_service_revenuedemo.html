@@ -80,7 +80,11 @@ tailwind.config = {
   .tbl-scroll{max-height:260px;overflow:auto}
   .tbl-half{max-height:130px;overflow:auto}
   .h-main{position:relative;height:430px}
-  .h-main canvas{max-width:100%}
+  .h-trend{position:relative;height:290px}
+  .h-mini{position:relative;height:250px}
+  .h-tm{position:relative;height:310px}
+  .h-modal{position:relative;height:180px}
+  .h-main canvas,.h-trend canvas,.h-mini canvas,.h-tm canvas,.h-modal canvas{max-width:100%}
   .tbl-list{max-height:440px;overflow:auto}
   .tbl-list table{font-size:13px}
   .tbl-list thead th{font-size:12px;box-shadow:0 1px 0 #e2e8f0}
@@ -889,13 +893,11 @@ const LEVEL_STYLE = {
   L5:{bg:'bg-blue-50 dark:bg-blue-950/40',text:'text-blue-700 dark:text-blue-300',bar:'#003E7E',label:'L5 (20M+)'}
 };
 const EXCLUDE_STATUS = ['created','cancel','cancelled','reject','rejected'];
-/* ใบเสนอราคาที่กำหนดเองว่าให้ยึดข้อมูลจากบันทึก (recNo) ไหน พร้อมราคาและชื่อลูกค้าที่ถูกต้อง
-   รูปแบบ: 'เลขที่ใบเสนอราคา': {recNo, price, company}  (ไม่ใส่ price/company = ใช้ค่าจาก recNo นั้น) */
 const QUOTE_OVERRIDE = {
   'ALC-26020173': {recNo:4, price:48150, company:'นิคมอุตสาหกรรม ซีพีจีซี'}
 };
 const coKey=n=>String(n||'').toLowerCase().replace(/บริษัท|จำกัด|จํากัด|\(มหาชน\)|co\.?,?\s*ltd\.?|company|limited|\(.*?\)|[\s\.,\-]/g,'');
-const EXCLUDE_SAMPLE_STATUS = ['initial','cancel','cancelled'];   // สถานะตัวอย่างที่ไม่นำมาแสดง/คำนวณ
+const EXCLUDE_SAMPLE_STATUS = ['initial','cancel','cancelled'];
 const DONE_STATUS = ['completed','complete','closed','finished','approved'];
 const MONTH_TH = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 const PALETTE = ['#0072BC','#00A0E9','#003E7E','#3b9ffb','#60bdff','#14b8a6','#6366f1','#0ea5e9','#8b5cf6','#f59e0b','#ef4444','#22c55e',
@@ -1487,7 +1489,6 @@ function multiSelect(mountId,label,options,set,onChange,w='w-44',searchable=fals
   el.querySelector('.ms-none').onclick=()=>{set.clear();paint(search?search.value:'');sync();onChange();};
 }
 
-/* คลิกแบบ delegate: ชื่อบริษัท */
 document.addEventListener('click',e=>{
   document.querySelectorAll('.ms-panel').forEach(p=>p.classList.add('hidden'));
   const c=e.target.closest('[data-comp]');
@@ -1563,7 +1564,6 @@ function renderCore(){
   const rev=sumRev(cur.q);
   const nQuote=cntQuote(cur.q),nSample=cntSample(cur.d),nTest=cntTest(cur.d);
 
-  /* ----- Summary ----- */
   const doneCnt=cur.q.filter(q=>DONE_STATUS.includes(String(q.status).toLowerCase())).length;
   const completionRate=cur.q.length?doneCnt/cur.q.length*100:0;
   setTxt('kRev',num(rev));
@@ -1630,7 +1630,6 @@ function renderCore(){
   paintKPI('kpiMonthCard','kpiMonthBadge','kpiMonthVal','kpiMonthBar','kpiMonthSub',mNow,false);
   paintKPI('kpiYearCard','kpiYearBadge','kpiYearVal','kpiYearBar','kpiYearSub',yNow,true);
 
-  /* ----- Retention / Churn ----- */
   const prevComps=new Set(MODEL.quotes.filter(x=>x.y===curY-1&&passNonDate(x)).map(q=>q.company));
   const currComps=new Set(MODEL.quotes.filter(x=>x.y===curY&&passNonDate(x)).map(q=>q.company));
   let retained=0,churn=0;
@@ -1640,7 +1639,6 @@ function renderCore(){
   setTxt('kRetention',prevComps.size?`${retentionRate.toFixed(1)}% / ${churnRate.toFixed(1)}%`:'—');
   setTxt('kRetentionSub',prevComps.size?`ซื้อซ้ำ ${retained} · หายไป ${churn} (ฐาน ${prevComps.size} ราย ปี ${curY-1})`:`ไม่มีข้อมูลปี ${curY-1}`);
 
-  /* ----- At-risk ----- */
   const atRiskList=[];
   prevComps.forEach(c=>{
     if(currComps.has(c)) return;
@@ -1670,7 +1668,6 @@ function renderCore(){
     </tr>`;}).join(''):`<tr><td colspan="6" class="py-6 text-center text-slate-400">ไม่มีลูกค้าปี ${curY-1} ที่หลุดหายในปี ${curY}</td></tr>`);
   LAST_AT_RISK=atRiskList;
 
-  /* ----- Priority ----- */
   const PRIO_ORDER=['Normal','Urgent','Express'];
   const prioBucket={Normal:[],Urgent:[],Express:[]};
   cur.q.forEach(q=>{ (prioBucket[q.prio]||prioBucket.Normal).push(q); });
@@ -1713,7 +1710,6 @@ function renderCore(){
     </tr>`);
   LAST_PRIO=pStat;
 
-  /* ----- New customers ----- */
   const newByMonth=Array(12).fill(null).map(()=>[]);
   const excludedInYear=[];
   Object.entries(MODEL.firstSeen).forEach(([comp,f])=>{
@@ -1851,7 +1847,6 @@ function renderCore(){
     :`นิยามลูกค้าใหม่: ลูกค้าที่ไม่เคยใช้บริการมาก่อนเลย · คอลัมน์รายได้ = ยอดทั้งปีแรก`);
   LAST_NC={ncList,newByMonth,newCntM,newCumM,newRevM,oldRevM,curY,excludedInYear};
 
-  /* ----- Lead time ----- */
   const ltAll=avgLead(cur.q), ltMed=medLead(cur.q), ltP90=p90Lead(cur.q);
   setTxt('kLead',ltAll==null?'—':`${day1(ltAll)} / ${day1(ltP90)} วัน`);
   setStyle('kLead','color',ltColor(ltAll));
@@ -1890,7 +1885,6 @@ function renderCore(){
       scales:{x:{beginAtZero:true,grid:{color:'rgba(148,163,184,.15)'},ticks:{font:{size:9.5}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
   });
 
-  /* ----- Monthly trend + forecast ----- */
   const sNow=[],sPrev=[];
   for(let m=1;m<=12;m++){sNow.push(revOf(curY,m));sPrev.push(revOf(curY-1,m));}
   let lastM=0; for(let m=1;m<=12;m++) if(sNow[m-1]>0) lastM=m;
@@ -1913,7 +1907,6 @@ function renderCore(){
         x:{grid:{display:false},ticks:{font:{size:10}}}}}
   });
 
-  /* ----- Daily trend ----- */
   const dateMap={};
   cur.q.forEach(q=>{ const k=ymd(q.date); dateMap[k]=(dateMap[k]||0)+q.revenue; });
   let timeline=[];
@@ -1957,7 +1950,6 @@ function renderCore(){
     ?`ยอดรวม <b>${money(rev)} บาท</b> · มีรายได้ ${num(activeDays)} จาก ${num(timeline.length)} วัน · เฉลี่ยต่อวันที่มีงาน ${num(activeDays?rev/activeDays:0)} บาท · สูงสุด <b>${timeline[maxDay].label}</b> (${num(dailyData[maxDay])} บาท) · จุดสีเทา = เสาร์–อาทิตย์`
     :'ไม่มีข้อมูลในช่วงที่เลือก');
 
-  /* ----- Quarter ----- */
   const qRows=[1,2,3,4].map(qq=>{
     const ms=[qq*3-2,qq*3-1,qq*3];
     const q1=MODEL.quotes.filter(x=>x.y===curY&&ms.includes(x.m)&&passNonDate(x));
@@ -1977,7 +1969,6 @@ function renderCore(){
       <td class="py-2.5 pr-3"><span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${s.bg} ${s.text}">${r.lv}</span></td></tr>`;
   }).join(''));
 
-  /* ----- Pipeline ----- */
   const byStatus={}; cur.q.forEach(q=>byStatus[q.status]=(byStatus[q.status]||0)+q.revenue);
   const stArr=Object.entries(byStatus).sort((a,b)=>b[1]-a[1]);
   const doneRev=stArr.filter(([k])=>DONE_STATUS.includes(k.toLowerCase())).reduce((s,x)=>s+x[1],0);
@@ -1994,7 +1985,6 @@ function renderCore(){
     `<span class="text-emerald-600">■</span> ปิดงานแล้ว <b>${num(doneRev)}</b> บาท (${rev?(doneRev/rev*100).toFixed(1):0}%) · `+
     `<span class="text-amber-500">■</span> ระหว่างดำเนินการ <b>${num(pipeRev)}</b> บาท (${rev?(pipeRev/rev*100).toFixed(1):0}%)`);
 
-  /* ----- Company / Lab / Loc / Svc ----- */
   const topComp=compRank.slice(0,10);
   const wrapName=n=>{
     if(n.length<=26) return n;
@@ -2057,7 +2047,6 @@ function renderCore(){
         tooltip:{callbacks:{label:c=>`${c.label}: ${money(c.parsed)} บาท`}}}}
   });
 
-  /* ----- Service Group YoY ----- */
   (function(){
     const mt=($('fSvcYoyMetric')||{}).value||'rev';
     const prevY=curY-1;
@@ -2083,7 +2072,7 @@ function renderCore(){
       .filter(r=>r.cur||r.prev).sort((a,b)=>b.cur-a.cur||b.prev-a.prev);
     const tC=rows.reduce((t,r)=>t+r.cur,0),tP=rows.reduce((t,r)=>t+r.prev,0);
     const unit=mt==='rev'?'บาท':mt==='quote'?'ใบ':'ตัวอย่าง';
-    const f=mt==='rev'?num:num;
+    const f=num;
     const pctOf=(c,p)=>p>0?(c-p)/p*100:null;
     const badge=(c,p)=>{
       const pc=pctOf(c,p);
@@ -2122,7 +2111,6 @@ function renderCore(){
     LAST_SVC_YOY={curY,prevY,basis,unit,rows};
   })();
 
-  /* ----- Customer-level YoY: Revenue Bridge + Declining customers ----- */
   (function(){
     const prevY=curY-1;
     const mSet=STATE.months&&STATE.months.size?STATE.months:null;
@@ -2203,7 +2191,7 @@ function renderCore(){
     setTxt('thDeclPrev',`ปี ${prevY}`); setTxt('thDeclCur',`ปี ${curY}`);
     setTxt('declCount',dec.length?`${num(dec.length)} ราย · ลดลงรวม ${num(-dSum)} บาท`:'0 ราย');
     setTxt('declNote',`เทียบ ${basis} ปี ${curY} กับปี ${prevY} · เฉพาะลูกค้าที่ยังมียอดปีนี้ และลดลง ≥ ${thr}%`
-      +(minBase?` · ยอดปีก่อน ≥ ${num(minBase)} บาท`:'')+` · ลูกค้าที่ไม่มียอดเลวอยู่ในรายการ "เสี่ยงหาย"`
+      +(minBase?` · ยอดปีก่อน ≥ ${num(minBase)} บาท`:'')+` · ลูกค้าที่ไม่มียอดอยู่ในรายการ "เสี่ยงหาย"`
       +(dec.length&&dBase?` · รวมแล้วลดลง ${(-dSum/dBase*100).toFixed(1)}% ของยอดปีก่อนของกลุ่มนี้`:''));
     setHtml('tbDecl',dec.length?dec.map((x,i)=>{
       const pc=-x.d/x.prev*100, cls=pc>=70?'idle-hi':pc>=50?'idle-md':'idle-lo';
@@ -2224,7 +2212,6 @@ function renderCore(){
       +`<b>ตัวเลือกที่เปิดอยู่:</b> รวมชื่อลูกค้าอัตโนมัติ ${STATE.autoClean?'เปิด':'ปิด'} · รวมชื่อคล้ายกัน ${STATE.fuzzy?'เปิด':'ปิด'} · ยกเว้นลูกค้าภายใน ${STATE.exclInternal?'เปิด':'ปิด'} · โหมดรายได้ลูกค้าใหม่ ${STATE.ncMode==='cohort'?'Cohort':'ทุกเดือน'}`);
   })();
 
-  /* ----- Contact ----- */
   const contactMap={};
   cur.q.forEach(q=>{
     const cn=q.contactName||'ไม่ระบุ';
@@ -2243,7 +2230,6 @@ function renderCore(){
     </tr>`).join(''):`<tr><td colspan="5" class="py-6 text-center text-slate-400">ไม่มีข้อมูลผู้ติดต่อ</td></tr>`);
   LAST_CT=contactArr;
 
-  /* ----- Test by month ----- */
   const isRev=STATE.metric==='rev';
   const fmtV=v=>isRev?money(v)+' บาท':num(v)+' รายการ';
   const qYear=MODEL.quotes.filter(x=>x.y===curY&&passNonDate(x));
@@ -2305,7 +2291,6 @@ function renderCore(){
     :`นับแบบ distinct: sampleId + sampleDesc + variantId + paramListId · รวมทั้งปี <b>${num(grandTotal)} รายการ</b>`);
   LAST_TM={topG,restG,byGrpMonth,monthTotal,curY,dim:STATE.dim,metric:STATE.metric,totalByGrp,otherArr,grandTotal};
 
-  /* ----- Top tests ----- */
   const testByReq={}; cur.d.forEach(d=>{(testByReq[d.requestId]=testByReq[d.requestId]||[]).push(d);});
   const agg={};
   cur.q.forEach(q=>{
@@ -2337,7 +2322,6 @@ function renderCore(){
   }).join(''):`<tr><td colspan="9" class="py-6 text-center text-slate-400">ไม่มีข้อมูล</td></tr>`);
   setTxt('topTestShare',topTests.length?`Top ${topTests.length} รวม ${money(cumRev)} บาท (${rev?(cumRev/rev*100).toFixed(1):0}% ของรายได้ทั้งหมด)`:'–');
 
-  /* ----- Insights & Recommendations ----- */
   const ins=[],rec=[];
   const li=(ic,t,c='text-slate-600 dark:text-slate-300')=>`<li class="flex gap-2.5 items-start"><span>${ic}</span><span class="${c}">${t}</span></li>`;
   const R='text-slate-700 dark:text-slate-200';
@@ -2795,42 +2779,54 @@ on('btnXlsx','click',()=>{
     ...L.svcArr.map(x=>({มิติ:'Service Group (รายได้)',ชื่อ:x[0],ค่า:r2(x[1])}))]);
   const H=MODEL.health;
   SH(wb,'Health Check',[
-    ...H.zeroPrice.map(x=>({ประเภท:'ราคาเป็น 0',ใบเสนอราคา:x.qano,สถานะ:x.status,ลูกค้า:x.company})),
-    ...H.badDate.map(x=>({ประเภท:'วันที่ผิดรูปแบบ',ใบเสนอราคา:x.qano,ค่าต้นทาง:x.raw})),
-    ...H.priceConflict.map(x=>({ประเภท:'ราคาขัดแย้งในใบเดียวกัน',ใบเสนอราคา:x.qano,ราคาที่พบ:x.prices.join(' vs ')})),
-    ...H.qanoReuse.map(x=>({ประเภท:'เลขที่ใบซ้ำข้ามลูกค้า/Lab/ปี',ใบเสนอราคา:x.qano,รายละเอียด:x.sig})),
-    ...H.future.map(x=>({ประเภท:'วันที่ในอนาคต',ใบเสนอราคา:x.qano,วันที่:x.d.toLocaleDateString('th-TH'),ลูกค้า:x.company,ราคา:r2(x.rev)})),
-    ...H.orphanDetail.map(id=>({ประเภท:'Detail ไม่พบใน Main',requestId:id}))
-  ]);
+    ...H.zeroPrice.map(x=>({ประเภท:'ราคาเป็น 0',เลขที่:x.qano,สถานะ:x.status,ลูกค้า:x.company})),
+    ...H.badDate.map(x=>({ประเภท:'วันที่อ่านไม่ได้',เลขที่:x.qano,ค่าดิบ:x.raw})),
+    ...H.future.map(x=>({ประเภท:'วันที่อนาคต',เลขที่:x.qano,วันที่:x.d.toLocaleDateString('th-TH'),ลูกค้า:x.company,ยอดเงิน:r2(x.rev)})),
+    ...H.priceConflict.map(x=>({ประเภท:'ราคาขัดแย้ง',เลขที่:x.qano,ราคาที่พบ:x.prices.join(' vs ')}))]);
   XLSX.writeFile(wb,`IRPC_Outside_Revenue_${stamp()}.xlsx`);
   toast('ส่งออก Excel เรียบร้อยแล้ว');
 });
 
 on('btnTopTestsXlsx','click',()=>{
-  if(!LAST||!LAST.topTests){ toast('ยังไม่มีข้อมูล'); return; }
-  const wb=XLSX.utils.book_new();
-  SH(wb,'Top 50 Tests',LAST.topTests.map(([k,v],i)=>{
-    const lt=v.lt.length?v.lt.reduce((a,b)=>a+b,0)/v.lt.length:null;
-    return {อันดับ:i+1,รายการทดสอบ:k,กลุ่มบริการ:v.svc,ตัวอย่าง:v.s.size,ทดสอบ:v.t.size,
-      'Lead Time (วัน)':lt==null?'':r2(lt),รายได้ปันส่วน:r2(v.rev),
-      '% ของรายได้รวม':LAST.rev?r2(v.rev/LAST.rev*100):0,'% สะสม':LAST.rev?r2((v._cum||0)/LAST.rev*100):0};
-  }));
+  if(!LAST||!LAST.topTests||!LAST.topTests.length){ toast('ไม่มีข้อมูลรายการทดสอบในขอบเขตนี้'); return; }
+  const L=LAST,wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([
+    ['IRPC Testing Services — Top 50 รายการทดสอบที่สร้างรายได้สูงสุด'],
+    ['วันที่ส่งออก',new Date().toLocaleString('th-TH')],
+    ['ขอบเขต',scopeText()],
+    ['รายได้รวมในขอบเขต (บาท)',r2(L.rev)],
+    []
+  ]),'Meta');
+  SH(wb,'Top 50 Tests',L.topTests.map(([k,v],i)=>({
+    อันดับ:i+1,
+    รายการทดสอบ:k,
+    กลุ่มบริการ:v.svc,
+    ตัวอย่าง:v.s.size,
+    ทดสอบ:v.t.size,
+    'Lead Time (วัน)':v.lt.length?r2(v.lt.reduce((a,b)=>a+b,0)/v.lt.length):'',
+    'รายได้ (บาท)':r2(v.rev),
+    '% ของรายได้':L.rev?r2(v.rev/L.rev*100):0,
+    '% สะสม':L.rev?r2((v._cum||0)/L.rev*100):0
+  })));
   XLSX.writeFile(wb,`IRPC_Top50_Tests_${stamp()}.xlsx`);
   toast('ส่งออก Top 50 รายการทดสอบเรียบร้อยแล้ว');
 });
 
 on('btnHcExport','click',()=>{
+  if(!MODEL) return;
   const H=MODEL.health,wb=XLSX.utils.book_new();
-  SH(wb,'Health Issues',[
-    ...H.zeroPrice.map(x=>({ประเภท:'ราคาเป็น 0',ใบเสนอราคา:x.qano,สถานะ:x.status,ลูกค้า:x.company})),
-    ...H.badDate.map(x=>({ประเภท:'วันที่ผิดรูปแบบ',ใบเสนอราคา:x.qano,ค่าต้นทาง:x.raw})),
-    ...H.priceConflict.map(x=>({ประเภท:'ราคาขัดแย้ง',ใบเสนอราคา:x.qano,ราคาที่พบ:x.prices.join(' vs ')})),
-    ...H.qanoReuse.map(x=>({ประเภท:'เลขที่ใบซ้ำข้ามลูกค้า/Lab/ปี',ใบเสนอราคา:x.qano,รายละเอียด:x.sig})),
-    ...H.future.map(x=>({ประเภท:'วันที่ในอนาคต',ใบเสนอราคา:x.qano,วันที่:x.d.toLocaleDateString('th-TH'),ลูกค้า:x.company,ราคา:r2(x.rev)})),
-    ...H.orphanDetail.map(id=>({ประเภท:'Detail ไม่มีใน Main',requestId:id}))
-  ]);
+  SH(wb,'Issues',[
+    ...H.zeroPrice.map(x=>({ปัญหา:'ราคาเป็น 0',เลขที่:x.qano,สถานะ:x.status,ลูกค้า:x.company})),
+    ...H.badDate.map(x=>({ปัญหา:'วันที่อ่านไม่ได้',เลขที่:x.qano,ค่าดิบ:x.raw})),
+    ...H.future.map(x=>({ปัญหา:'วันที่อนาคต',เลขที่:x.qano,วันที่:x.d.toLocaleDateString('th-TH'),ลูกค้า:x.company,ยอดเงิน:r2(x.rev)})),
+    ...H.priceConflict.map(x=>({ปัญหา:'ราคาขัดแย้ง',เลขที่:x.qano,ราคาที่พบ:x.prices.join(' vs ')}))]);
+  SH(wb,'Merge Log',MODEL.nameMap.groups.filter(g=>g.members.length>1).map((g,i)=>({
+    ลำดับ:i+1,ชื่อหลัก:g.canonical,'จำนวนชื่อที่รวม':g.members.length,
+    'ชื่อที่รวมเข้ามา':g.members.filter(m=>m!==g.canonical).join(' | '),
+    ประเภท:g.type==='fuzzy'?'คล้ายกัน (ควรตรวจ)':g.type==='manual'?'กำหนดเอง':'ตรงกันแน่นอน',
+    ใบเสนอราคารวม:g.n||0,รายได้รวม:r2(g.rev)})));
   XLSX.writeFile(wb,`IRPC_Data_Health_${stamp()}.xlsx`);
-  toast('ส่งออกรายการที่ต้องตรวจสอบแล้ว');
+  toast('ส่งออกรายการตรวจสอบแล้ว');
 });
 
 on('btnShare','click',()=>{
@@ -2845,7 +2841,7 @@ on('btnShare','click',()=>{
   });
   let html='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
   html=html.replace(/<script id="shared-data"[\s\S]*?<\/script>/,'');
-  const injected=`<script id="shared-data">window.__SHARED_DATA__=${dataJson};window.__SHARED_STATE__=${stateJson};</script>\n`;
+  const injected=`<script id="shared-data">window.__SHARED_DATA__=${dataJson};window.__SHARED_STATE__=${stateJson};<\/script>\n`;
   html=html.replace('</body>',injected+'</body>');
   const blob=new Blob([html],{type:'text/html;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fn; a.click();
@@ -2862,6 +2858,7 @@ on('btnPng','click',async()=>{
   a.href=canvas.toDataURL('image/png'); a.click();
   toast('ดาวน์โหลด PNG เรียบร้อยแล้ว');
 });
+
 on('btnPdf','click',()=>{
   setTxt('printMeta','พิมพ์เมื่อ '+(new Date()).toLocaleString('th-TH')+' · ขอบเขต: '+scopeText());
   window.print();
