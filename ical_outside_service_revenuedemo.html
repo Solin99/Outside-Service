@@ -375,7 +375,7 @@ tailwind.config = {
     </div>
   </section>
 
-  <!-- NEW CUSTOMER LIST (ปรับขนาดคอลัมน์ให้กระชับ สมดุล) -->
+  <!-- NEW CUSTOMER LIST -->
   <section class="card p-4">
     <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
       <h2 class="sec-title">📇 รายชื่อลูกค้าใหม่ (New Customer List)</h2>
@@ -410,7 +410,7 @@ tailwind.config = {
     <p id="ncExclNote" class="sub-xs mt-1.5">—</p>
   </section>
 
-  <!-- AT-RISK CUSTOMERS (ปรับขนาดคอลัมน์ให้กระชับ สมดุล) -->
+  <!-- AT-RISK CUSTOMERS -->
   <section class="card p-4">
     <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
       <h2 class="sec-title">⚠️ ลูกค้าเสี่ยงหาย (At-Risk Customers)</h2>
@@ -1292,12 +1292,10 @@ function buildModel(raw){
   const BLANK_Q=/^(-+|n\/?a|null|none|0+|\(.*\)|tbd|xxx*)$/i;
   mainN.forEach(r=>{
     let q=G(r,...A.qano); const rid=G(r,...A.reqId);
-    if(q&&BLANK_Q.test(String(q).trim())){ H.qanoBlank++; q=null; }   // placeholder = no quote number
+    if(q&&BLANK_Q.test(String(q).trim())){ H.qanoBlank++; q=null; }
     if(!q) H.noQano.push(String(rid||'-'));
     let key=q?'Q:'+String(q).trim():'R:'+String(rid||Math.random());
     if(q&&!QUOTE_OVERRIDE[String(q).trim()]){
-      // เลขที่เดียวกันแต่อยู่คนละคำขอ (requestId) และต่างลูกค้า/Lab/ปี => คนละใบ ไม่รวมกัน
-      // บันทึกต่าง ๆ ของคำขอเดียวกัน (revision / แก้ชื่อลูกค้า) ต้องรวมเป็นใบเดียวเสมอ
       const dd=parseDate(G(r,...A.reqDate));
       const sig=[coKey(G(r,...A.company)||G(r,...A.compName)||''),String(G(r,...A.lab)||'').trim(),dd?dd.getFullYear():''].join('|');
       const qk=String(q).trim(), ridS=String(rid||''), f0=qSig.get(qk);
@@ -1615,7 +1613,6 @@ function renderCore(){
     setTxt('yoyWarn',w.join(' '));
   })();
 
-  /* ใช้เกณฑ์ KPI ใหม่ (L1 < 17M, L2 >= 17M, L3 >= 18M, L4 >= 19M, L5 >= 20M) */
   const paintKPI=(c1,b1,v1,bar1,s1,val,isYear)=>{
     const lv=isYear?kpiLevelYear(val):kpiLevelMonth(val);
     const s=LEVEL_STYLE[lv];
@@ -1889,7 +1886,7 @@ function renderCore(){
       datasets:[{data:ltArr.map(x=>+x[1].toFixed(2)),backgroundColor:ltArr.map(x=>ltColor(x[1])),borderRadius:5,maxBarThickness:18}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:false},tooltip:{callbacks:{title:c=>ltArr[c[0].dataIndex][0],
-        label:c=>`เฉลี่ย ${day1(c.parsed.x)} วัน · P90 ${day1(ltArr[c.dataIndex][3])} · ${num(ltArr[c.dataIndex][2])} รายการ`}}},
+        label:c=>`เฉลี่ย ${day1(c.parsed.x)} วัน · P90 ${day1(ltArr[c[0].dataIndex][3])} · ${num(ltArr[c[0].dataIndex][2])} รายการ`}}},
       scales:{x:{beginAtZero:true,grid:{color:'rgba(148,163,184,.15)'},ticks:{font:{size:9.5}}},y:{grid:{display:false},ticks:{font:{size:10}}}}}
   });
 
@@ -2178,7 +2175,6 @@ function renderCore(){
         <td class="text-right ${dTot>=0?'text-emerald-600':'text-rose-600'}">${pctTot===null?'–':(pctTot>=0?'+':'')+pctTot.toFixed(1)+'%'}</td><td></td></tr>`
       :`<tr><td colspan="5" class="py-6 text-center text-slate-400">ไม่มีข้อมูล</td></tr>`);
 
-    // waterfall
     const labels=[`ปี ${prevY}`,...META.map(m=>m.label.replace(' (ปีนี้ไม่มียอด)','')),`ปี ${curY}`];
     const bars=[[0,tPrev]], cols=['#94a3b8'], vals=[tPrev], isTot=[true];
     let run=tPrev;
@@ -2200,7 +2196,6 @@ function renderCore(){
     });
     LAST_BRIDGE={curY,prevY,basis,tPrev,tCur,META};
 
-    /* ---- declining customers ---- */
     const thr=+(($('fDeclPct')||{}).value||30), minBase=+(($('fDeclMin')||{}).value||0);
     const dec=cats.down.filter(x=>x.prev>=minBase&&(-x.d/x.prev*100)>=thr&&!(STATE.exclInternal&&isExcludedCustomer(x.c)))
       .sort((a,b)=>a.d-b.d);
@@ -2224,7 +2219,6 @@ function renderCore(){
       :`<tr><td colspan="7" class="py-6 text-center text-slate-400">ไม่มีลูกค้าที่ลดลงตามเกณฑ์นี้</td></tr>`);
     LAST_DECL={curY,prevY,basis,thr,minBase,rows:dec};
 
-    /* ---- live line in definitions ---- */
     setHtml('defsLive',
       `<b>ข้อมูล ณ ตอนนี้:</b> ข้อมูลล่าสุดในตัวกรองนี้คือ ${MONTH_TH[refM-1]} ${refY} · ${num(MODEL.quotes.length)} ใบเสนอราคา · ขอบเขต ${esc(scopeText())}<br>`
       +`<b>ตัวเลือกที่เปิดอยู่:</b> รวมชื่อลูกค้าอัตโนมัติ ${STATE.autoClean?'เปิด':'ปิด'} · รวมชื่อคล้ายกัน ${STATE.fuzzy?'เปิด':'ปิด'} · ยกเว้นลูกค้าภายใน ${STATE.exclInternal?'เปิด':'ปิด'} · โหมดรายได้ลูกค้าใหม่ ${STATE.ncMode==='cohort'?'Cohort':'ทุกเดือน'}`);
@@ -2604,47 +2598,93 @@ function readSheetSmart(ws){
 const colsOf=rows=>rows.length?Object.keys(rows[0]).map(k=>String(k).trim().toLowerCase().replace(/\s+/g,'')):[];
 const hasAny=(cols,list)=>list.some(k=>cols.includes(k));
 
+async function loadExcelFileList(files, sourceDesc = '') {
+  const sheets = [];
+  let cm = [], cd = [];
+
+  for (const f of files) {
+    const buf = await f.arrayBuffer();
+    const wb = XLSX.read(new Uint8Array(buf), { type: 'array', cellDates: true });
+    wb.SheetNames.forEach(sn => {
+      const rows = readSheetSmart(wb.Sheets[sn]);
+      if (!rows.length) return;
+      const cols = colsOf(rows);
+      sheets.push(`${f.name}›${sn}(${rows.length})`);
+      const isDetail = hasAny(cols, A.sampleId) || hasAny(cols, A.paramId);
+      const isMain = hasAny(cols, A.qano) || (hasAny(cols, A.reqId) && hasAny(cols, A.price));
+      if (isDetail) cd.push(...rows);
+      else if (isMain) cm.push(...rows);
+    });
+  }
+
+  if (!cm.length) {
+    throw new Error('ไม่พบชีตใบเสนอราคา (ต้องมีคอลัมน์ u_qano หรือ requestId + quantation)\nชีตที่อ่านได้: ' + (sheets.join(', ') || '(ไม่มี)'));
+  }
+
+  const seen = new Set(), mainU = [];
+  cm.forEach(r => {
+    const o = {};
+    for (const k in r) o[String(k).trim().toLowerCase()] = r[k];
+    const k = [G(o, ...A.qano), G(o, ...A.reqId), G(o, ...A.recNo), G(o, ...A.price)].join('|');
+    if (seen.has(k)) return;
+    seen.add(k);
+    mainU.push(r);
+  });
+
+  const seenD = new Set(), detU = [];
+  cd.forEach(r => {
+    const o = {};
+    for (const k in r) o[String(k).trim().toLowerCase()] = r[k];
+    const k = [G(o, ...A.reqId), G(o, ...A.sampleId), G(o, ...A.paramId), G(o, ...A.variantId)].join('|');
+    if (seenD.has(k)) return;
+    seenD.add(k);
+    detU.push(r);
+  });
+
+  RAW = { main: mainU, detail: detU };
+  MODEL = buildModel(RAW);
+  STATE.year = null;
+  STATE.months.clear();
+  STATE.comp.clear();
+  STATE.req.clear();
+  STATE.samp.clear();
+  STATE.lab.clear();
+  STATE.ncMonth = 'ALL';
+  refreshFilters();
+  render();
+  setTxt('srcLabel', sourceDesc || `แหล่งข้อมูล: ${files.length} ไฟล์ · Main ${num(mainU.length)} แถว · Detail ${num(detU.length)} แถว`);
+  return { mainCount: mainU.length, detailCount: detU.length };
+}
+
+async function autoLoadRepoExcel(fileName = 'Revenue Outsite.xlsx') {
+  if (window.location.protocol === 'file:') {
+    console.warn('เปิดไฟล์ผ่าน file:// เบราว์เซอร์อาจบล็อก fetch ไฟล์ Excel — ใช้ Mockup Data ชั่วคราว หรือเปิดผ่านลิงก์เว็บ/Local Server');
+    return;
+  }
+
+  const url = `./${encodeURIComponent(fileName)}?v=${Date.now()}`;
+  try {
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const blob = await res.blob();
+    const file = new File([blob], fileName, {
+      type: blob.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    const info = await loadExcelFileList([file], `แหล่งข้อมูล: ${fileName} (Auto)`);
+    toast(`โหลด ${fileName} อัตโนมัติแล้ว · Main ${num(info.mainCount)} / Detail ${num(info.detailCount)} แถว`, 3500);
+  } catch (err) {
+    console.warn(`โหลด ${fileName} อัตโนมัติไม่สำเร็จ (ใช้ข้อมูลเริ่มต้นแทน):`, err.message);
+  }
+}
+
 on('fileInput','change',async e=>{
   const files=Array.from(e.target.files||[]);
   if(!files.length) return;
-  const sheets=[];
   try{
-    let cm=[],cd=[];
-    for(const f of files){
-      const buf=await f.arrayBuffer();
-      const wb=XLSX.read(new Uint8Array(buf),{type:'array',cellDates:true});
-      wb.SheetNames.forEach(sn=>{
-        const rows=readSheetSmart(wb.Sheets[sn]);
-        if(!rows.length) return;
-        const cols=colsOf(rows);
-        sheets.push(`${f.name}›${sn}(${rows.length})`);
-        const isDetail=hasAny(cols,A.sampleId)||hasAny(cols,A.paramId);
-        const isMain=hasAny(cols,A.qano)||(hasAny(cols,A.reqId)&&hasAny(cols,A.price));
-        if(isDetail) cd.push(...rows); else if(isMain) cm.push(...rows);
-      });
-    }
-    if(!cm.length) throw new Error('ไม่พบชีตใบเสนอราคา (ต้องมีคอลัมน์ u_qano หรือ requestId + quantation)\nชีตที่อ่านได้: '+(sheets.join(', ')||'(ไม่มี)'));
-
-    const seen=new Set(), mainU=[];
-    cm.forEach(r=>{
-      const o={}; for(const k in r) o[String(k).trim().toLowerCase()]=r[k];
-      const k=[G(o,...A.qano),G(o,...A.reqId),G(o,...A.recNo),G(o,...A.price)].join('|');
-      if(seen.has(k)) return; seen.add(k); mainU.push(r);
-    });
-    const seenD=new Set(), detU=[];
-    cd.forEach(r=>{
-      const o={}; for(const k in r) o[String(k).trim().toLowerCase()]=r[k];
-      const k=[G(o,...A.reqId),G(o,...A.sampleId),G(o,...A.paramId),G(o,...A.variantId)].join('|');
-      if(seenD.has(k)) return; seenD.add(k); detU.push(r);
-    });
-
-    RAW={main:mainU,detail:detU};
-    MODEL=buildModel(RAW);
-    STATE.year=null;STATE.months.clear();STATE.comp.clear();STATE.req.clear();STATE.samp.clear();STATE.lab.clear();
-    STATE.ncMonth='ALL';
-    refreshFilters(); render();
-    setTxt('srcLabel',`แหล่งข้อมูล: ${files.length} ไฟล์ · Main ${num(mainU.length)} แถว · Detail ${num(detU.length)} แถว`);
-    toast(`อ่านสำเร็จ ${files.length} ไฟล์ · Main ${num(mainU.length)} / Detail ${num(detU.length)} แถว`+(detU.length?'':' (ไม่พบชีต Detail)'),4000);
+    const info = await loadExcelFileList(files);
+    toast(`อ่านสำเร็จ ${files.length} ไฟล์ · Main ${num(info.mainCount)} / Detail ${num(info.detailCount)} แถว`+(info.detailCount?'':' (ไม่พบชีต Detail)'),4000);
   }catch(err){
     console.error(err);
     alert('อ่านไฟล์ไม่สำเร็จ: '+err.message);
@@ -2753,162 +2793,139 @@ on('btnXlsx','click',()=>{
     ...L.labArr.map(x=>({มิติ:'Lab (ตัวอย่าง)',ชื่อ:x[0],ค่า:x[1]})),
     ...L.locArr.map(x=>({มิติ:'Lab Location (ตัวอย่าง)',ชื่อ:x[0],ค่า:x[1]})),
     ...L.svcArr.map(x=>({มิติ:'Service Group (รายได้)',ชื่อ:x[0],ค่า:r2(x[1])}))]);
-  SH(wb,'Quotations',L.cur.q.map(q=>({u_qano:q.qano,requestId:q.requestId,requestStatus:q.status,
-    requestDate:q.date.toLocaleDateString('th-TH'),ปี:q.y,เดือน:MONTH_TH[q.m-1],
-    'บริษัท (รวมแล้ว)':q.company,'บริษัท (ต้นฉบับ)':q.companyRaw,'ลูกค้าใหม่':isNewCustomerYear(q.company,q.y)?'ใช่':'ไม่',
-    requestBy:q.owner,contactName:q.contactName,'sPriority (ดิบ)':q.sPriority,'ระดับความเร่งด่วน':q.prio,
-    serviceGroup:q.svc,lab:q.lab,labLocation:q.loc,'Lead Time (วัน)':q.leadTime==null?'':r2(q.leadTime),quantation:q.revenue})));
-  SH(wb,'Details',L.cur.d.map(d=>({requestId:d.requestId,sampleId:d.sampleId,sampleDesc:d.sampleDesc,variantId:d.variantId,
-    paramListId:d.paramListId,paramListDesc:d.paramDesc,sampleStatus:d.sampleStatus,lab:d.lab,forLab:d.loc,serviceGroup:d.svc,
-    'Lead Time (วัน)':d.leadTime==null?'':r2(d.leadTime)})));
+  const H=MODEL.health;
+  SH(wb,'Health Check',[
+    ...H.zeroPrice.map(x=>({ประเภท:'ราคาเป็น 0',ใบเสนอราคา:x.qano,สถานะ:x.status,ลูกค้า:x.company})),
+    ...H.badDate.map(x=>({ประเภท:'วันที่ผิดรูปแบบ',ใบเสนอราคา:x.qano,ค่าต้นทาง:x.raw})),
+    ...H.priceConflict.map(x=>({ประเภท:'ราคาขัดแย้งในใบเดียวกัน',ใบเสนอราคา:x.qano,ราคาที่พบ:x.prices.join(' vs ')})),
+    ...H.qanoReuse.map(x=>({ประเภท:'เลขที่ใบซ้ำข้ามลูกค้า/Lab/ปี',ใบเสนอราคา:x.qano,รายละเอียด:x.sig})),
+    ...H.future.map(x=>({ประเภท:'วันที่ในอนาคต',ใบเสนอราคา:x.qano,วันที่:x.d.toLocaleDateString('th-TH'),ลูกค้า:x.company,ราคา:r2(x.rev)})),
+    ...H.orphanDetail.map(id=>({ประเภท:'Detail ไม่พบใน Main',requestId:id}))
+  ]);
+  XLSX.writeFile(wb,`IRPC_Outside_Revenue_${stamp()}.xlsx`);
+  toast('ส่งออก Excel เรียบร้อยแล้ว');
+});
 
-  XLSX.writeFile(wb,`IRPC_Testing_Revenue_${stamp()}.xlsx`);
-  toast(`ส่งออก Excel เรียบร้อย (${wb.SheetNames.length} ชีต)`);
+on('btnTopTestsXlsx','click',()=>{
+  if(!LAST||!LAST.topTests){ toast('ยังไม่มีข้อมูล'); return; }
+  const wb=XLSX.utils.book_new();
+  SH(wb,'Top 50 Tests',LAST.topTests.map(([k,v],i)=>{
+    const lt=v.lt.length?v.lt.reduce((a,b)=>a+b,0)/v.lt.length:null;
+    return {อันดับ:i+1,รายการทดสอบ:k,กลุ่มบริการ:v.svc,ตัวอย่าง:v.s.size,ทดสอบ:v.t.size,
+      'Lead Time (วัน)':lt==null?'':r2(lt),รายได้ปันส่วน:r2(v.rev),
+      '% ของรายได้รวม':LAST.rev?r2(v.rev/LAST.rev*100):0,'% สะสม':LAST.rev?r2((v._cum||0)/LAST.rev*100):0};
+  }));
+  XLSX.writeFile(wb,`IRPC_Top50_Tests_${stamp()}.xlsx`);
+  toast('ส่งออก Top 50 รายการทดสอบเรียบร้อยแล้ว');
 });
 
 on('btnHcExport','click',()=>{
-  if(!MODEL) return;
   const H=MODEL.health,wb=XLSX.utils.book_new();
-  SH(wb,'ราคาเป็น 0',H.zeroPrice.length?H.zeroPrice:[{ผลตรวจ:'ไม่มีปัญหา'}],'Zero Price');
-  SH(wb,'วันที่ผิดปกติ',[
-    ...H.badDate.map(x=>({ประเภท:'อ่านค่าไม่ได้',u_qano:x.qano,'ค่าที่พบ':x.raw})),
-    ...H.future.map(x=>({ประเภท:'วันที่อนาคต (ตัดออก)',u_qano:x.qano,'ค่าที่พบ':x.d.toLocaleDateString('th-TH'),บริษัท:x.company,มูลค่า:x.rev})),
-    ...H.old.map(x=>({ประเภท:'เก่ากว่าปี 2020',u_qano:x.qano,'ค่าที่พบ':x.d.toLocaleDateString('th-TH')}))]);
-  SH(wb,'ไม่ระบุความเร่งด่วน',H.noPrio.length?H.noPrio:[{ผลตรวจ:'ระบุครบ'}]);
-  SH(wb,'ไม่ระบุผู้รับผิดชอบ',MODEL.quotes.filter(q=>q.owner==='ไม่ระบุ').map(q=>({u_qano:q.qano,บริษัท:q.company,สถานะ:q.status})));
-  SH(wb,'ราคาขัดแย้ง',H.priceConflict.length?H.priceConflict:[{ผลตรวจ:'ไม่พบความขัดแย้ง'}]);
-  SH(wb,'ชื่อที่ถูกรวม',MODEL.nameMap.groups.filter(g=>g.members.length>1).map(g=>({
-    ชื่อหลัก:g.canonical,'ชื่อที่รวมเข้ามา':g.members.filter(m=>m!==g.canonical).join(' | '),
-    ประเภท:g.type==='fuzzy'?'คล้ายกัน (ควรตรวจ)':g.type==='manual'?'กำหนดเอง':'ตรงกันแน่นอน'})));
-  SH(wb,'รายชื่อยกเว้นลูกค้าใหม่',MODEL.excludedFound.length?MODEL.excludedFound.map(c=>({ชื่อ:c,
-    'ปีแรกที่พบ':MODEL.firstSeen[c]?MODEL.firstSeen[c].y:'','เดือนแรกที่พบ':MODEL.firstSeen[c]?MONTH_TH[MODEL.firstSeen[c].m-1]:''})):[{ผลตรวจ:'ไม่มี'}]);
-  SH(wb,'ไม่มี u_qano',H.noQano.length?H.noQano.map(x=>({requestId:x})):[{ผลตรวจ:'มีครบ'}]);
-  SH(wb,'Detail ไม่พบใน Main',H.orphanDetail.length?H.orphanDetail.map(x=>({requestId:x})):[{ผลตรวจ:'ครบถ้วน'}]);
-  XLSX.writeFile(wb,`IRPC_Testing_DataIssues_${stamp()}.xlsx`);
-  toast('ส่งออกรายการที่ต้องแก้เรียบร้อย');
+  SH(wb,'Health Issues',[
+    ...H.zeroPrice.map(x=>({ประเภท:'ราคาเป็น 0',ใบเสนอราคา:x.qano,สถานะ:x.status,ลูกค้า:x.company})),
+    ...H.badDate.map(x=>({ประเภท:'วันที่ผิดรูปแบบ',ใบเสนอราคา:x.qano,ค่าต้นทาง:x.raw})),
+    ...H.priceConflict.map(x=>({ประเภท:'ราคาขัดแย้ง',ใบเสนอราคา:x.qano,ราคาที่พบ:x.prices.join(' vs ')})),
+    ...H.qanoReuse.map(x=>({ประเภท:'เลขที่ใบซ้ำข้ามลูกค้า/Lab/ปี',ใบเสนอราคา:x.qano,รายละเอียด:x.sig})),
+    ...H.future.map(x=>({ประเภท:'วันที่ในอนาคต',ใบเสนอราคา:x.qano,วันที่:x.d.toLocaleDateString('th-TH'),ลูกค้า:x.company,ราคา:r2(x.rev)})),
+    ...H.orphanDetail.map(id=>({ประเภท:'Detail ไม่มีใน Main',requestId:id}))
+  ]);
+  XLSX.writeFile(wb,`IRPC_Data_Health_${stamp()}.xlsx`);
+  toast('ส่งออกรายการที่ต้องตรวจสอบแล้ว');
+});
+
+on('btnShare','click',()=>{
+  const fn=`IRPC_Outside_Revenue_Snapshot_${stamp()}.html`;
+  const dataJson=JSON.stringify(RAW).replace(/<\/(script)/gi,'<\\/$1');
+  const stateJson=JSON.stringify({
+    year:STATE.year, months:[...STATE.months], comp:[...STATE.comp], req:[...STATE.req],
+    samp:[...STATE.samp], lab:[...STATE.lab], topN:STATE.topN, stacked:STATE.stacked,
+    dim:STATE.dim, metric:STATE.metric, hideOther:STATE.hideOther, ltDim:STATE.ltDim,
+    ncMonth:STATE.ncMonth, ncMode:STATE.ncMode, autoClean:STATE.autoClean,
+    fuzzy:STATE.fuzzy, fuzzyTh:STATE.fuzzyTh, exclInternal:STATE.exclInternal
+  });
+  let html='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
+  html=html.replace(/<script id="shared-data"[\s\S]*?<\/script>/,'');
+  const injected=`<script id="shared-data">window.__SHARED_DATA__=${dataJson};window.__SHARED_STATE__=${stateJson};</script>\n`;
+  html=html.replace('</body>',injected+'</body>');
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=fn; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+  toast('บันทึกไฟล์แชร์ '+fn+' แล้ว · ส่งไฟล์นี้ให้ผู้อื่นเปิดดูได้ทันที');
 });
 
 on('btnPng','click',async()=>{
-  const b=$('btnPng'),o=b.textContent; b.textContent='⏳ กำลังสร้าง...';
-  try{
-    $('printChips').classList.remove('hidden');
-    const c=await html2canvas($('dashRoot'),{scale:2,backgroundColor:document.documentElement.classList.contains('dark')?'#0f172a':'#f4faff',useCORS:true,windowWidth:1500});
-    const a=document.createElement('a'); a.download=`IRPC_Testing_Dashboard_${stamp()}.png`; a.href=c.toDataURL('image/png'); a.click();
-  }catch(e){ alert('สร้างภาพไม่สำเร็จ: '+e.message); }
-  finally{ $('printChips').classList.add('hidden'); b.textContent=o; }
+  toast('กำลังสร้างภาพ PNG...');
+  const el=$('dashRoot'),dark=document.documentElement.classList.contains('dark');
+  const canvas=await html2canvas(el,{scale:1.5,useCORS:true,backgroundColor:dark?'#0f172a':'#f8fafc',
+    ignoreElements:n=>n.classList&&n.classList.contains('no-print')});
+  const a=document.createElement('a'); a.download=`IRPC_Outside_Revenue_${stamp()}.png`;
+  a.href=canvas.toDataURL('image/png'); a.click();
+  toast('ดาวน์โหลด PNG เรียบร้อยแล้ว');
 });
-const wait=ms=>new Promise(r=>setTimeout(r,ms));
-let PRINT_RESTORE=null;
-async function toLightForExport(){
-  const wasDark=document.documentElement.classList.contains('dark');
-  if(wasDark){ setTheme(false); if(MODEL) render(); await wait(450); }
-  return ()=>{ if(wasDark){ setTheme(true); if(MODEL) render(); } };
-}
-function printMetaText(){
-  const d=new Date().toLocaleString('th-TH',{dateStyle:'long',timeStyle:'short'});
-  return `จัดทำเมื่อ ${d} · ข้อมูล ${MODEL?num(MODEL.quotes.length):0} ใบเสนอราคา / ${MODEL?num(MODEL.details.length):0} รายการตัวอย่าง`;
-}
-on('btnPdf','click',async()=>{
-  if(!MODEL){ toast('ยังไม่มีข้อมูลให้ส่งออก'); return; }
-  PRINT_RESTORE=await toLightForExport();
-  setTxt('printMeta',printMetaText());
-  $('printChips').classList.remove('hidden');
-  await wait(300);
-  if(window.Chart) Object.values(Chart.instances).forEach(c=>c.resize());
-  toast('เลือก "บันทึกเป็น PDF" · ขนาด A4 แนวนอน · เปิด Background graphics');
-  await wait(600);
+on('btnPdf','click',()=>{
+  setTxt('printMeta','พิมพ์เมื่อ '+(new Date()).toLocaleString('th-TH')+' · ขอบเขต: '+scopeText());
   window.print();
 });
-window.addEventListener('beforeprint',()=>{ document.querySelectorAll('details').forEach(d=>{d.dataset.wasOpen=d.open?'1':'0'; d.open=true;}); if(window.Chart) Object.values(Chart.instances).forEach(c=>c.resize()); });
-window.addEventListener('afterprint',()=>{
-  document.querySelectorAll('details').forEach(d=>{ if(d.dataset.wasOpen==='0') d.open=false; });
-  $('printChips').classList.add('hidden');
-  if(PRINT_RESTORE){ PRINT_RESTORE(); PRINT_RESTORE=null; }
-  if(window.Chart) Object.values(Chart.instances).forEach(c=>c.resize());
-});
 
-/* ----- Snapshot: ไฟล์ HTML อ่านอย่างเดียว เปิดได้ทุกเครื่อง ไม่ต้องโหลด Excel ----- */
-on('btnShare','click',async()=>{
-  if(!MODEL){ toast('ยังไม่มีข้อมูลให้ส่งออก'); return; }
-  const b=$('btnShare'),o=b.textContent; b.textContent='⏳ กำลังสร้าง...';
-  const restore=await toLightForExport();
-  try{
-    setTxt('printMeta',printMetaText());
-    $('printChips').classList.remove('hidden');
-    await wait(250);
-    const clone=document.documentElement.cloneNode(true);
-    const src=[...document.querySelectorAll('canvas')], dst=[...clone.querySelectorAll('canvas')];
-    src.forEach((c,i)=>{ if(!dst[i]) return;
-      const img=document.createElement('img'); img.src=c.toDataURL('image/png');
-      img.setAttribute('style','width:100%;height:100%;object-fit:contain;display:block'); dst[i].replaceWith(img); });
-    clone.querySelectorAll('script,.no-print,.modal,#toast').forEach(e=>e.remove());
-    clone.querySelectorAll('[onclick]').forEach(e=>{e.removeAttribute('onclick');e.style.cursor='default';});
-    clone.classList.remove('dark');
-    clone.querySelectorAll('details').forEach(d=>d.setAttribute('open',''));
-    const meta=clone.querySelector('#printMeta'); if(meta){ meta.classList.remove('print-only'); meta.style.cssText='font-size:12px;color:#475569;margin:2px 0 8px'; }
-    const chips=clone.querySelector('#printChips'); if(chips) chips.classList.remove('hidden');
-    const st=document.createElement('style');
-    st.textContent='header.hd,.sticky{position:static!important}.tbl-list,.tbl-scroll,.tbl-half{max-height:none!important}'
-      +'.print-only{display:block!important}body{background:#f4faff}';
-    clone.querySelector('head').appendChild(st);
-    const note=document.createElement('div');
-    note.setAttribute('style','background:#fff7ed;color:#9a3412;border-bottom:1px solid #fed7aa;padding:8px 16px;font-size:12px;text-align:center');
-    note.textContent='รายงานสรุป ณ เวลาที่บันทึก (อ่านอย่างเดียว) · ข้อมูลลูกค้าและรายได้เป็นความลับ โปรดส่งต่อเฉพาะผู้ที่เกี่ยวข้อง';
-    clone.querySelector('body').insertBefore(note,clone.querySelector('body').firstChild);
-    const html='<!DOCTYPE html>\n'+clone.outerHTML;
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
-    a.download=`IRPC_Outside_Revenue_Report_${stamp()}.html`; a.click();
-    setTimeout(()=>URL.revokeObjectURL(a.href),4000);
-    toast('บันทึกไฟล์รายงานเรียบร้อย · ส่งต่อให้ผู้อื่นเปิดดูได้ทันที');
-  }catch(e){ alert('สร้างไฟล์ไม่สำเร็จ: '+e.message); }
-  finally{ $('printChips').classList.add('hidden'); restore(); b.textContent=o; }
-});
-
-/* ========== EVENTS ========== */
-function rebuild(){ MODEL=buildModel(RAW); STATE.comp.clear(); refreshFilters(); render(); }
-on('fAutoClean','change',e=>{STATE.autoClean=e.target.checked;rebuild();});
-on('fFuzzy','change',e=>{STATE.fuzzy=e.target.checked;rebuild();});
-on('fFuzzyLv','change',e=>{STATE.fuzzyTh=+e.target.value;if(STATE.fuzzy)rebuild();});
-on('fExclInternal','change',e=>{STATE.exclInternal=e.target.checked;render();});
+/* ========== CONTROLS ========== */
+function rebuild(){
+  if(!MODEL) return;
+  const keepY=STATE.year,keepM=new Set(STATE.months),keepC=new Set(STATE.comp),keepR=new Set(STATE.req),keepS=new Set(STATE.samp),keepL=new Set(STATE.lab);
+  MODEL=buildModel(RAW);
+  STATE.year=keepY; STATE.months=keepM; STATE.comp=keepC; STATE.req=keepR; STATE.samp=keepS; STATE.lab=keepL;
+  refreshFilters(); render();
+}
+on('fAutoClean','change',e=>{ STATE.autoClean=e.target.checked; rebuild(); });
+on('fFuzzy','change',e=>{ STATE.fuzzy=e.target.checked; rebuild(); });
+on('fFuzzyLv','change',e=>{ STATE.fuzzyTh=+e.target.value; if(STATE.fuzzy) rebuild(); });
+on('fExclInternal','change',e=>{ STATE.exclInternal=e.target.checked; render(); });
+on('fDeclPct','change',render);
+on('fDeclMin','change',render);
+on('fSvcYoyMetric','change',render);
+on('fNcMonth','change',e=>{ STATE.ncMonth=e.target.value; render(); });
+on('fNcMode','change',e=>{ STATE.ncMode=e.target.value; render(); });
+on('fLtDim','change',e=>{ STATE.ltDim=e.target.value; render(); });
+on('fMetric','change',e=>{ STATE.metric=e.target.value; render(); });
+on('fDim','change',e=>{ STATE.dim=e.target.value; render(); });
+on('fTopN','change',e=>{ STATE.topN=+e.target.value; render(); });
+on('fStack','change',e=>{ STATE.stacked=e.target.value==='1'; render(); });
+on('fHideOther','change',e=>{ STATE.hideOther=e.target.checked; render(); });
 on('btnReset','click',()=>{
-  STATE.months.clear();STATE.comp.clear();STATE.req.clear();STATE.samp.clear();STATE.lab.clear();
-  STATE.year=MODEL.years[0]??'ALL';STATE.ncMonth='ALL';refreshFilters();render();});
-on('fMetric','change',e=>{STATE.metric=e.target.value;render();});
-on('fDim','change',e=>{STATE.dim=e.target.value;render();});
-on('fTopN','change',e=>{STATE.topN=+e.target.value;render();});
-on('fStack','change',e=>{STATE.stacked=e.target.value==='1';render();});
-on('fHideOther','change',e=>{STATE.hideOther=e.target.checked;render();});
-on('fLtDim','change',e=>{STATE.ltDim=e.target.value;render();});
-on('fNcMonth','change',e=>{STATE.ncMonth=e.target.value;render();});
-on('fSvcYoyMetric','change',()=>render());
-on('btnTopTestsXlsx','click',()=>{
-  if(!LAST||!LAST.topTests||!LAST.topTests.length){ toast('ยังไม่มีข้อมูลให้ส่งออก'); return; }
-  try{
-    const L=LAST,wb=XLSX.utils.book_new();
-    SH(wb,`Top ${L.topTests.length} Tests`,L.topTests.map(([k,v],i)=>({
-      อันดับ:i+1,รายการทดสอบ:k,กลุ่มบริการ:v.svc,ตัวอย่าง:v.s.size,ทดสอบ:v.t.size,
-      'Lead Time เฉลี่ย (วัน)':v.lt.length?r2(v.lt.reduce((a,b)=>a+b,0)/v.lt.length):'',
-      'รายได้ปันส่วน (บาท)':r2(v.rev),'% ของรายได้รวม':L.rev?r2(v.rev/L.rev*100):0,'% สะสม':L.rev?r2((v._cum||0)/L.rev*100):0})));
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([
-      ['รายการทดสอบที่สร้างรายได้สูงสุด (Top '+L.topTests.length+')'],
-      ['วันที่ส่งออก',new Date().toLocaleString('th-TH')],
-      ['ขอบเขต',scopeText()],
-      ['รายได้รวมในขอบเขต (บาท)',r2(L.rev)],
-      ['วิธีคำนวณ','รายได้ใบเสนอราคา ÷ จำนวนรายการทดสอบ (distinct) ในใบนั้น แล้วรวมตามรายการทดสอบ'],
-      ['ข้อยกเว้น','ไม่รวมตัวอย่างสถานะ Initial / Cancelled · ไม่รวมใบสถานะ Created / Cancelled / Reject'],
-      ['Lead Time','วันที่เสร็จ − วันที่รับคำขอ เฉลี่ยต่อรายการทดสอบ']]),'เงื่อนไข');
-    XLSX.writeFile(wb,`IRPC_Top${L.topTests.length}_Tests_${stamp()}.xlsx`);
-  }catch(e){ alert('ส่งออกไม่สำเร็จ: '+e.message); }
+  STATE.year=MODEL.years[0]??'ALL';
+  STATE.months.clear(); STATE.comp.clear(); STATE.req.clear(); STATE.samp.clear(); STATE.lab.clear();
+  STATE.topN=8; STATE.stacked=true; STATE.dim='param'; STATE.metric='cnt'; STATE.hideOther=false;
+  STATE.ltDim='lab'; STATE.ncMonth='ALL'; STATE.ncMode='cohort';
+  $('fTopN').value='8'; $('fStack').value='1'; $('fDim').value='param'; $('fMetric').value='cnt'; $('fHideOther').checked=false;
+  if($('fDeclPct')) $('fDeclPct').value='30'; if($('fDeclMin')) $('fDeclMin').value='10000';
+  if($('fSvcYoyMetric')) $('fSvcYoyMetric').value='rev';
+  refreshFilters(); render(); toast('ล้างตัวกรองทั้งหมดแล้ว');
 });
-on('fDeclPct','change',()=>render());
-on('fDeclMin','change',()=>render());
-on('fNcMode','change',e=>{STATE.ncMode=e.target.value;render();});
 
-/* ========== INIT ========== */
-MODEL=buildModel(RAW);
-refreshFilters();
-render();
+/* ========== AUTO LOAD EXCEL FROM REPO & INIT ========== */
+if(window.__SHARED_DATA__){
+  RAW=window.__SHARED_DATA__;
+  if(window.__SHARED_STATE__){
+    const s=window.__SHARED_STATE__;
+    STATE.year=s.year??STATE.year;
+    ['months','comp','req','samp','lab'].forEach(k=>{ if(Array.isArray(s[k])) STATE[k]=new Set(s[k]); });
+    ['topN','stacked','dim','metric','hideOther','ltDim','ncMonth','ncMode','autoClean','fuzzy','fuzzyTh','exclInternal']
+      .forEach(k=>{ if(s[k]!==undefined) STATE[k]=s[k]; });
+    if($('fAutoClean')) $('fAutoClean').checked=STATE.autoClean;
+    if($('fFuzzy')) $('fFuzzy').checked=STATE.fuzzy;
+    if($('fFuzzyLv')) $('fFuzzyLv').value=String(STATE.fuzzyTh);
+    if($('fExclInternal')) $('fExclInternal').checked=STATE.exclInternal;
+    if($('fTopN')) $('fTopN').value=String(STATE.topN);
+    if($('fStack')) $('fStack').value=STATE.stacked?'1':'0';
+    if($('fDim')) $('fDim').value=STATE.dim;
+    if($('fMetric')) $('fMetric').value=STATE.metric;
+    if($('fHideOther')) $('fHideOther').checked=STATE.hideOther;
+  }
+  MODEL=buildModel(RAW); refreshFilters(); render();
+  setTxt('srcLabel','แหล่งข้อมูล: ไฟล์แชร์ (Snapshot)');
+} else {
+  MODEL=buildModel(RAW); refreshFilters(); render();
+  autoLoadRepoExcel('Revenue Outsite.xlsx');
+}
 </script>
 </body>
 </html>
